@@ -109,39 +109,3 @@ async def delete_comment(post_id: str, comment_id: str = Path(description="The U
         return {"message": f"Comment with UUID {comment_id} successfully deleted."} 
     else:
         return {"message": f"Comment not found."}
-
-
-'''
-
-
-2. **Get All Comments**:
-   - **HTTP Method**: GET
-   - **URL**: `/comments`
-   - **Description**: Retrieve a list of all comments.
-
-3. **Get a Specific Comment**:
-   - **HTTP Method**: GET
-   - **URL**: `/comments/{comment_id}`
-   - **Description**: Retrieve a specific comment by its unique identifier (comment_id).
-
-6. **Get Comments for a Specific Post**:
-   - **HTTP Method**: GET
-   - **URL**: `/posts/{post_id}/comments`
-   - **Description**: Retrieve all comments associated with a specific post (post_id).
-
-4. **Update a Comment**:
-   - **HTTP Method**: PATCH or PUT
-   - **URL**: `/comments/{comment_id}`
-   - **Description**: Update an existing comment by its unique identifier.
-
-5. **Delete a Comment**:
-   - **HTTP Method**: DELETE
-   - **URL**: `/comments/{comment_id}`
-   - **Description**: Delete a specific comment by its unique identifier.
-
-
-7. **Create a Comment for a Specific Post**:
-   - **HTTP Method**: POST
-   - **URL**: `/posts/{post_id}/comments`
-   - **Description**: Create a new comment associated with a specific post (post_id).
-'''
