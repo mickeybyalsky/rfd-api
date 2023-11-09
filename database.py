@@ -1,10 +1,13 @@
 import os
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
-client = MongoClient(f"mongodb+srv://{os.getenv('MONGODB_USERNAME')}:{os.getenv('MONGODB_PASSSWORD')}!@rfd-api.jdl8vta.mongodb.net/?retryWrites=true&w=majority")
+load_dotenv()
+
+client = MongoClient(f"mongodb+srv://{os.environ.get('MONGODB_USERNAME')}:{os.environ.get('MONGODB_PASSSWORD')}@rfd-api.jdl8vta.mongodb.net/?retryWrites=true&w=majority")
 
 user_db = client.user_db
-user_collection = user_db["user_collection"]
+user_collection = user_db.user_collection
 
 # user_db = client.user_db
 post_db = client.post_db

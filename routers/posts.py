@@ -1,8 +1,8 @@
-import uuid
 from fastapi import APIRouter, HTTPException, Path, Body, status
 from models import Post
 from database import post_collection 
 from schemas import list_serial_post, individual_serial_post
+from fastapi.responses import JSONResponse
 from bson import ObjectId
 
 router = APIRouter(
@@ -10,43 +10,50 @@ router = APIRouter(
     tags=['Posts']
 )
 
+''' POST FUNCTIONS
+CREATE post
+READ post
+READ all posts
+UPDATE post
+DELETE post
+'''
+
 @router.post("/")
 async def create_post(post: Post):
-    post_dict = post.model_dump()
-    post_result = post_collection.insert_one(post_dict)
+    new_post = post.model_dump()
+    post_result = post_collection.insert_one(new_post)
     
     if post_result.acknowledged:
         new_post_id = str(post_result.inserted_id)
-        return {"message": "Post created successfully", "post_id": new_post_id}
-    else:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Post was not inserted to database")
+        return JSONResponse(content={"message": "Post created successfully", "post_id": new_post_id}, status_code=status.HTTP_201_CREATED)
+    
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Post not created")
 
-@router.get("/", status_code=status.HTTP_200_OK)
-async def read_posts():
+@router.get("/")
+async def get_posts():
     posts = list_serial_post(post_collection.find())
     if posts:   
         return posts
     
-    raise HTTPException(status_code=404, detail="No posts found.")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No posts found.")
 
-@router.get("/{post_id}", status_code=status.HTTP_200_OK)
-async def read_post(post_id: str = Path(description="The ID of the post you'd like to view")):
+@router.get("/{post_id}")
+async def get_post(post_id: str = Path(description="The ID of the post you'd like to view")):
     if not ObjectId.is_valid(post_id):
-        raise HTTPException(status_code=400, detail="Invalid post_id format. It must be a valid ObjectId.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
 
     post = post_collection.find_one({"_id": ObjectId(post_id)})
 
     if post:
         post = list_serial_post(post)
-        return {"post": post}
+        return JSONResponse(content={"post": post}, status_code=status.HTTP_200_OK)
     
-    raise HTTPException(status_code=404, detail="Post not found")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
     
 @router.patch("/{post_id}")
 async def update_post(post_id: str, post_data: Post = Body(..., description="The post data to update")):
-    # post_query = {"_id": ObjectId(post_id)}
     if not ObjectId.is_valid(post_id):
-        raise HTTPException(status_code=400, detail="Invalid post_id format. It must be a valid ObjectId.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
     
     existing_post = post_collection.find_one({"_id": post_id})
 
@@ -66,23 +73,21 @@ async def update_post(post_id: str, post_data: Post = Body(..., description="The
 
         if updated_post: 
             updated_post["_id"] = updated_post["_id"]
-
-            return {"message": f"Post with ID {post_id} updated", "post_data": updated_post}
-        else:
-                return {"message": f"Post with ID {post_id} not found."}
+            return JSONResponse(content={"message": f"Post with ID {post_id} updated.", "post_data": updated_post}, status_code=status.HTTP_200_OK)
+   
     else:
-        return {"message": f"Post with ID {post_id} not found."}
+        return JSONResponse(content={"message": f"Post with ObjectID {post_id} not found."}, status_code=status.HTTP_404_NOT_FOUND)
 
 @router.delete("/{post_id}")
 async def delete_post(post_id: str = Path(description="The ObjectID of the post you'd like to remove")):
     if not ObjectId.is_valid(post_id):
-        raise HTTPException(status_code=400, detail="Invalid post_id format. It must be a valid ObjectId.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
 
     result = post_collection.delete_one({"_id": ObjectId(post_id)})
-    if result.deleted_count == 1:
-        return status.HTTP_204_NO_CONTENT
     
-    else:
-        raise HTTPException(status_code=404, detail=f"Post with ObjectID {post_id} not found.")
+    if result.deleted_count == 1:
+        return JSONResponse(content=f"Post with ID {post_id} deleted.", status_code=status.HTTP_200_OK)
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with ObjectID {post_id} not found.")
 
     

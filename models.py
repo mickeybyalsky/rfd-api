@@ -1,11 +1,28 @@
 from typing import Optional, List
 import uuid
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from typing_extensions import Annotated
+
+PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class User(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     user_display_name: Optional[str] = None
     user_email: Optional[str] = None
     user_location: Optional[str] = None
+
+    model_config = ConfigDict(
+    populate_by_name=True,
+    arbitrary_types_allowed=True,
+    json_schema_extra={
+        "example": {
+            "name": "Jane Doe",
+            "user_display_name": "jdoe",
+            "user_email": "jdoe@example.com",
+            "user_location": "Toronto"
+        }
+    })
+
     # user_id: uuid
     # user_name: str
     # user_password: str
@@ -15,6 +32,7 @@ class User(BaseModel):
     # user_role: str
     
 class Comment(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     user_id: str
     post_id: str
     comment_body: Optional[str] = None
@@ -24,11 +42,12 @@ class Comment(BaseModel):
     # comment_timestamp: str
 
 class Post(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     post_title: Optional[str] = None
     post_description: Optional[str] = None
     post_retailer: Optional[str] = None
     # post_id: uuid
-    post_comments: Optional[List[Comment]] = None
+    # post_comments: Optional[List[Comment]] = None
 #     post_author: User
 #     post_timestamp: str
 #     post_product_category: str
