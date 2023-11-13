@@ -16,7 +16,7 @@ def individual_serial_post(post) -> dict:
         "post_title": post["post_title"],
         "post_description": post["post_description"],
         "post_retailer": post["post_retailer"],
-        "post_commet": [list_serial_comment(post["post_comments"])] if post["post_comments"] else "None"
+        # "post_commet": [list_serial_comment(post["post_comments"])] if post["post_comments"] else "None"
     }
 
 def list_serial_post(posts) -> list:

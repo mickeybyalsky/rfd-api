@@ -31,7 +31,8 @@ async def create_post(post: Post):
 
 @router.get("/")
 async def get_posts():
-    posts = list_serial_post(post_collection.find())
+    posts = post_collection.find()
+    posts = list_serial_post(posts)
     if posts:   
         return posts
     

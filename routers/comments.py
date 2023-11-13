@@ -9,7 +9,7 @@ comments_db = {}
 
 ''' COMMENT FUNCTIONS
 CREATE comments for a post
-READ a comment
+READ a comment by comment
 READ comments for a post
 READ all comments for a user
 READ all Comments
@@ -24,25 +24,27 @@ router = APIRouter(
 @router.post("/comments")
 async def create_comment(new_comment: Comment):
     
-    if not ObjectId.is_valid(ObjectId(new_comment.post_id)):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")  
+    if ObjectId.is_valid(new_comment.user_id):
+        user = user_collection.find_one({"_id": ObjectId(new_comment.user_id)})
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist. Comment must be created for an existing user.")
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
     
-    post = post_collection.find_one({"_id": ObjectId(new_comment.post_id)})
-    if not post:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Post does not exist. Comment must be created for an existing post.")
+    if ObjectId.is_valid(new_comment.post_id):
+        post = post_collection.find_one({"_id": ObjectId(new_comment.post_id)})
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post does not exist. Comment must be created for an existing post.")
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")  
 
-   #  if not ObjectId.is_valid(new_comment.user_id):
-   #      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
-    # user = user_collection.find_one({"_id": new_comment["user_id"]})
-    # if not user:
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User does not exist. Comment must be created for an existing post.")
-
-    new_comment = new_comment.model_dump()
-    comment_result = comment_collection.insert_one(new_comment)
+    new_comment_data = new_comment.model_dump()
+    comment_result = comment_collection.insert_one(new_comment_data)
 
     if comment_result.acknowledged:
         new_comment_id = str(comment_result.inserted_id)
         return JSONResponse(content={"message": "Comment created successfully", "comment_id": new_comment_id}, status_code=status.HTTP_201_CREATED)
+
     '''
     add commment to comment db and each comment will have a reference to the post id in the attribute
     '''
@@ -107,16 +109,25 @@ async def get_comment_by_user(user_id: str):
    
    user_comments = comment_collection.find({"user_id": ObjectId(user_id)})
 
-   user_comments = list_serial_comment(user_comments)
+   if user_comments:
+      user_comments = list_serial_comment(user_comments)
+      return JSONResponse(content=user_comments, status_code=status.HTTP_200_OK)
+    
+   raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comments not found.")
 
    return user_comments
 
 @router.get("comments/{post_id}")
 async def get_comment_by_post(post_id: str):
-     pass
-# @router.get("/comments")
-# async def read_all_comments():
-#     pass
+    if not ObjectId.is_valid(ObjectId(post_id)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectID.")
+    
+    post_comments = comment_collection.find({"post_id": ObjectId(post_id)})
+
+    post_comments = list_serial_comment(post_comments)
+
+    return post_comments
+
 
 # @router.get("/posts/{post_id}/comments", tags=["Comments"])
 # async def read_post_comments(post_id: str):
