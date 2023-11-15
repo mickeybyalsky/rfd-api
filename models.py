@@ -27,6 +27,7 @@ class User(BaseModel):
     # user_name: str
     # user_password: str
     # user_post_count: int
+    # user_comment_count: int
     # user_reputation: int
     # user_join_date: str
     # user_role: str
