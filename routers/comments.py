@@ -19,17 +19,17 @@ upvote/downvote comments
 '''
 
 router = APIRouter(
-    tags=['Comments']
+    tags=['Comments'],
+    prefix="/comments"
+
 )
 
-@router.post("/comments",
-            response_description="Add new post",
-            esponse_model_by_alias=False,
+@router.post("/",
+            summary="Create a comment",
+            response_model_by_alias=False,
             status_code=status.HTTP_201_CREATED
         )
 async def create_comment(new_comment: Comment):
-    
-    
     if ObjectId.is_valid(new_comment.user_id):
         # if user is a valid user in the db
         user = user_collection.find_one({"_id": ObjectId(new_comment.user_id)})
@@ -59,23 +59,9 @@ async def create_comment(new_comment: Comment):
         return JSONResponse(content={"message": f"Comment {created_comment['_id']} created", "comment_data": created_comment})
 
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Comment not created")
-    '''
-    add commment to comment db and each comment will have a reference to the post id in the attribute
-    '''
-
-@router.get("/comments",
-            response_description="Get all comments",
-            response_model_by_alias=False
-            )
-async def get_all_comments():
-   comments = list_serial_comment(comment_collection.find())
-   if comments:
-       return comments
-
-   raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No comments found.")
  
-@router.get("/comments/{comment_id}",
-            response_description="Get a comment by Comment ID",
+@router.get("/{comment_id}",
+            summary="Get a comment",
             response_model_by_alias=False,
             )
 async def get_comment(comment_id: str = Path(description="The ID of the commment you'd like to view")):
@@ -90,43 +76,44 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
     
    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found.")
 
-@router.get("comments/{user_id}",
-            response_description="Get comments by User ID",
+@router.get("/",
+            summary="Get comments with optional filters",
             response_model_by_alias=False,
             )
-async def get_comment_by_user(user_id: str):
-   if not ObjectId.is_valid(user_id):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")  
-   
-   user_comments = comment_collection.find({"user_id": ObjectId(user_id)})
+async def get_comments_filtered(user_id: str = None, post_id: str = None):
+    filter_params = {}
 
-   if user_comments:
-      user_comments = list_serial_comment(user_comments)
-      return JSONResponse(content=user_comments, status_code=status.HTTP_200_OK)
-    
-   raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Comments for User {user_id} not found.")
+    if user_id:
+        if not ObjectId.is_valid(user_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
+        user =  user_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        filter_params["user_id"] = ObjectId(user_id)
 
-@router.get("comments/{post_id}",
-            response_description="Get comments by Post ID",
-            response_model_by_alias=False,
-            )
-async def get_comment_by_post(post_id: str):
-    if not ObjectId.is_valid(ObjectId(post_id)):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectID.")
-    
-    post_comments = comment_collection.find({"post_id": ObjectId(post_id)})
+    if post_id:
+        if not ObjectId.is_valid(post_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
+        post = post_collection.posts.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
+        filter_params["post_id"] = ObjectId(post_id)
 
-    if post_comments:
-        post_comments = list_serial_comment(post_comments)
-        return JSONResponse(content=post_comments, status_code=status.HTTP_200_OK)
-    
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Comments for Post {post_id} not found.")
+    comments = comment_collection.find(filter_params)
 
-@router.put("comments/{comment_id}",
-              response_description="Update a Comment",
+    if comments:
+        comments_result = list_serial_comment(comments)
+        return JSONResponse(content=comments_result, status_code=status.HTTP_200_OK)
+
+    all_comments = comment_collection.find()
+    all_comments_result = list_serial_comment(all_comments)
+    return JSONResponse(content=all_comments_result, status_code=status.HTTP_200_OK)
+
+@router.put("/{comment_id}",
+              summary="Update a Comment",
               response_model_by_alias=False,
               )
-async def update_post(comment_id: str, comment_data: UpdateComment = Body(..., description="The comment data to update")):
+async def update_comment(comment_id: str, comment_data: UpdateComment = Body(..., description="The comment data to update")):
     if not ObjectId.is_valid(comment_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid comment_id format. It must be a valid ObjectId.")
     
@@ -152,8 +139,8 @@ async def update_post(comment_id: str, comment_data: UpdateComment = Body(..., d
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Comment {comment_id} not found.")
     
-@router.delete("comments/{comment_id}",
-               response_description="Delete a comment",
+@router.delete("/{comment_id}",
+               summary="Delete a comment",
                response_model_by_alias=False,
                status_code=status.HTTP_204_NO_CONTENT
                )

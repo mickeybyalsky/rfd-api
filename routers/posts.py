@@ -23,7 +23,7 @@ get posts by retailer
 '''
 
 @router.post("/",
-            response_description="Add new post",
+            summary="Create a post",
             response_model_by_alias=False,
             status_code=status.HTTP_201_CREATED
         )
@@ -43,7 +43,7 @@ async def create_post(post: Post):
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Post not created")
 
 @router.get("/",
-            response_description="Get all posts",
+            summary="Get all posts",
             response_model_by_alias=False
             )
 async def get_all_posts():
@@ -54,7 +54,7 @@ async def get_all_posts():
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No posts found.")
 
 @router.get("/{post_id}",
-            response_description="Get a post by User ID",
+            summary="Get a post",
             response_model_by_alias=False,
             )
 async def get_post(post_id: str = Path(description="The ID of the post you'd like to view")):
@@ -70,7 +70,7 @@ async def get_post(post_id: str = Path(description="The ID of the post you'd lik
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {post_id} not found.")
     
 @router.put("/{post_id}",
-              response_description="Update a post",
+              summary="Update a post",
               response_model_by_alias=False,
               )
 async def update_post(post_id: str, post_data: UpdatePost = Body(..., description="The post data to update")):
@@ -100,7 +100,7 @@ async def update_post(post_id: str, post_data: UpdatePost = Body(..., descriptio
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {post_id} not found.")
     
 @router.delete("/{post_id}",
-               response_description="Delete a post",
+               summary="Delete a post",
                response_model_by_alias=False,
                status_code=status.HTTP_204_NO_CONTENT
                )

@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 @router.post("/", 
-        response_description="Add new user",
+        summary="Create a user",
         response_model_by_alias=False,
         status_code=status.HTTP_201_CREATED
     )
@@ -41,7 +41,7 @@ async def create_user(user: User):
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User not created")
 
 @router.get("/",
-        response_description="Get all users",
+        summary="Get all users",
         response_model_by_alias=False,
         )
 async def get_all_users():
@@ -52,7 +52,7 @@ async def get_all_users():
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found.")
 
 @router.get("/{user_id}",
-        response_description="Get a user",
+        summary="Get a user",
         response_model_by_alias=False,
         )
 async def get_user(user_id: str = Path(description="The ID of the user you'd like to view")):
@@ -69,7 +69,7 @@ async def get_user(user_id: str = Path(description="The ID of the user you'd lik
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found.")
 
 @router.put("/{user_id}",
-        response_description="Update a user",
+        summary="Update a user",
         response_model_by_alias=False,
         )
 async def update_user(user_id: str, user_data: UpdateUser = Body(..., description="The user data to update")):
@@ -101,7 +101,7 @@ async def update_user(user_id: str, user_data: UpdateUser = Body(..., descriptio
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found")
 
 @router.delete("/{user_id}",
-        response_description="Delete a user",
+        summary="Delete a user",
         response_model_by_alias=False,
         status_code=status.HTTP_204_NO_CONTENT
         )
