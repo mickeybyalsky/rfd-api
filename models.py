@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, List
 import uuid
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
@@ -54,10 +55,10 @@ class Comment(BaseModel):
     user_id: str
     post_id: str
     comment_body: str
-    # comment_id: str
+    comment_votes: int = 0
+    comment_timestamp: datetime = datetime.datetime.now()
+    
     # comment_author: User
-    # comment_votes: int
-    # comment_timestamp: str
 
     model_config = ConfigDict(
     populate_by_name=True,

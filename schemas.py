@@ -27,7 +27,9 @@ def individual_serial_comment(comment) -> dict:
         "id":str(comment["_id"]),
         "user_id": comment["user_id"],
         "post_id": comment["post_id"],
-        "comment_body": comment["comment_body"]
+        "comment_body": comment["comment_body"],
+        "comment_votes": comment["comment_votes"],
+        "comment_timestamp": comment["comment_timestamp"]
     }
 
 def list_serial_comment(comments) -> list:

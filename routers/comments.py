@@ -78,6 +78,7 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
 
 @router.get("/",
             summary="Get comments with optional filters",
+            description="Retrive's all comments based on provided filter, or returns all comments if no parameter's provided",
             response_model_by_alias=False,
             )
 async def get_comments_filtered(user_id: str = None, post_id: str = None):
@@ -154,3 +155,43 @@ async def delete_comment(comment_id: str = Path(description="The ObjectID of the
         return JSONResponse(content={"message": f"Comment {comment_id} removed."}, status_code=status.HTTP_200_OK)
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Comment {comment_id} not found.")
+
+@router.put("/{comment_id}/upvote",
+             summary="Upvote a comment",
+             response_model_by_alias=False,
+             status_code=status.HTTP_200_OK
+             )
+async def upvote_comment(comment_id: str = Path(description="The ID of the commment to upvote")):
+    print(comment_id)
+    if not ObjectId.is_valid(comment_id):
+      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid comment_id format. It must be a valid ObjectId")
+    
+    comment = comment_collection.find_one({"_id": ObjectId(comment_id)})
+    if comment:
+        result = comment_collection.update_one(
+            {"_id": ObjectId(comment_id)},
+            {"$inc": {"comment_votes": 1}})
+        if result.modified_count == 1:
+            return JSONResponse(content=f"Comment {comment_id} upvoted", status_code=status.HTTP_200_OK)
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found.")
+
+@router.put("/{comment_id}/downvote",
+             summary="Downvote a comment",
+             response_model_by_alias=False,
+             status_code=status.HTTP_200_OK
+             )
+async def upvote_comment(comment_id: str = Path(description="The ID of the commment to upvote")):
+    print(comment_id)
+    if not ObjectId.is_valid(comment_id):
+      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid comment_id format. It must be a valid ObjectId")
+    
+    comment = comment_collection.find_one({"_id": ObjectId(comment_id)})
+    if comment:
+        result = comment_collection.update_one(
+            {"_id": ObjectId(comment_id)},
+            {"$inc": {"comment_votes": -1}})
+        if result.modified_count == 1:
+            return JSONResponse(content=f"Comment {comment_id} downvoted", status_code=status.HTTP_200_OK)
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found.")
