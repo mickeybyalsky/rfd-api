@@ -84,31 +84,32 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
 async def get_comments_filtered(user_id: str = None, post_id: str = None):
     filter_params = {}
 
-    if user_id:
-        if not ObjectId.is_valid(user_id):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
-        user =  user_collection.find_one({"_id": ObjectId(user_id)})
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-        filter_params["user_id"] = ObjectId(user_id)
+    # if user_id:
+    #     if not ObjectId.is_valid(user_id):
+    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
+    #     user =  user_collection.find_one({"_id": ObjectId(user_id)})
+    #     if not user:
+    #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    #     filter_params["user_id"] = ObjectId(user_id)
 
     if post_id:
         if not ObjectId.is_valid(post_id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
-        post = post_collection.posts.find_one({"_id": ObjectId(post_id)})
+        post = post_collection.find_one({"_id": ObjectId(post_id)})
         if not post:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
         filter_params["post_id"] = ObjectId(post_id)
 
+    print(filter_params)
     comments = comment_collection.find(filter_params)
 
-    if comments:
+    if comments.count() > 0:
         comments_result = list_serial_comment(comments)
         return JSONResponse(content=comments_result, status_code=status.HTTP_200_OK)
-
-    all_comments = comment_collection.find()
-    all_comments_result = list_serial_comment(all_comments)
-    return JSONResponse(content=all_comments_result, status_code=status.HTTP_200_OK)
+    else:
+        all_comments = comment_collection.find()
+        all_comments_result = list_serial_comment(all_comments)
+        return JSONResponse(content=all_comments_result, status_code=status.HTTP_200_OK)
 
 @router.put("/{comment_id}",
               summary="Update a Comment",
@@ -181,7 +182,7 @@ async def upvote_comment(comment_id: str = Path(description="The ID of the commm
              response_model_by_alias=False,
              status_code=status.HTTP_200_OK
              )
-async def upvote_comment(comment_id: str = Path(description="The ID of the commment to upvote")):
+async def downvote_comment(comment_id: str = Path(description="The ID of the commment to upvote")):
     print(comment_id)
     if not ObjectId.is_valid(comment_id):
       raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid comment_id format. It must be a valid ObjectId")

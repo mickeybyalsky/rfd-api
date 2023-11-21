@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Path, Body, status
 from models import Post, UpdatePost
-from database import post_collection 
-from schemas import list_serial_post, individual_serial_post
+from database import post_collection, comment_collection 
+from schemas import list_serial_comment, list_serial_post, individual_serial_post
 from fastapi.responses import JSONResponse
 from bson import ObjectId
 from pymongo.collection import ReturnDocument
@@ -62,13 +62,22 @@ async def get_post(post_id: str = Path(description="The ID of the post you'd lik
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")
 
     post = post_collection.find_one({"_id": ObjectId(post_id)})
+    comments = comment_collection.find({"post_id": post_id})
+    
+    response_data = {}
 
     if post:
-        post = individual_serial_post(post)
-        return JSONResponse(content=post, status_code=status.HTTP_200_OK)
+        response_data["post"] = individual_serial_post(post)
+
+    if comments.count() > 0:
+        comments =  list_serial_comment(comments)
+        response_data["comments"] = comments
+
+    if response_data:
+        return JSONResponse(content=response_data, status_code=status.HTTP_200_OK)
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {post_id} not found.")
-    
+
 @router.put("/{post_id}",
               summary="Update a post",
               response_model_by_alias=False,
@@ -115,4 +124,42 @@ async def delete_post(post_id: str = Path(description="The ObjectID of the post 
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {post_id} not found.")
 
+@router.put("/{post_id}/upvote",
+             summary="Upvote a post",
+             response_model_by_alias=False,
+             status_code=status.HTTP_200_OK
+             )
+async def upvote_post(post_id: str = Path(description="The ID of the post to upvote")):
+    print(post_id)
+    if not ObjectId.is_valid(post_id):
+      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId")
     
+    post = post_collection.find_one({"_id": ObjectId(post_id)})
+    if post:
+        result = post_collection.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$inc": {"post_votes": 1}})
+        if result.modified_count == 1:
+            return JSONResponse(content=f"post {post_id} upvoted", status_code=status.HTTP_200_OK)
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="post not found.")
+
+@router.put("/{post_id}/downvote",
+             summary="Downvote a post",
+             response_model_by_alias=False,
+             status_code=status.HTTP_200_OK
+             )
+async def downvote_post(post_id: str = Path(description="The ID of the commment to upvote")):
+    print(post_id)
+    if not ObjectId.is_valid(post_id):
+      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId")
+    
+    post = post_collection.find_one({"_id": ObjectId(post_id)})
+    if post:
+        result = post_collection.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$inc": {"post_votes": -1}})
+        if result.modified_count == 1:
+            return JSONResponse(content=f"post {post_id} downvoted", status_code=status.HTTP_200_OK)
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="post not found.")

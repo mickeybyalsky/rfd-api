@@ -98,10 +98,11 @@ class Post(BaseModel):
     post_title: str
     post_description: str
     post_retailer: str
+    post_votes: int = 0
+    post_timestamp: datetime = datetime.datetime.now()
     # post_id: uuid
     # post_comments: Optional[List[Comment]] = None
 #     post_author: User
-#     post_timestamp: str
 #     post_product_category: str
 #     post_link_to_deal: str
 #     post_views: int
@@ -149,3 +150,4 @@ class UpdatePost(BaseModel):
     #     }
     # }
     )
+

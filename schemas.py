@@ -1,4 +1,4 @@
-def individual_serial_user(user) -> dict:
+def individual_serial_user(user):
     return {
         "id":str(user["_id"]),
         "user_display_name": user["user_display_name"],
@@ -6,30 +6,31 @@ def individual_serial_user(user) -> dict:
         "user_location": user["user_location"]
     }
 
-def list_serial_user(users) -> list:
+def list_serial_user(users):
     return[individual_serial_user(user) for user in users]
 
 
-def individual_serial_post(post) -> dict:
+def individual_serial_post(post):
     return {
         "id":str(post["_id"]),
         "post_title": post["post_title"],
         "post_description": post["post_description"],
-        "post_retailer": post["post_retailer"],
-        # "post_commet": [list_serial_comment(post["post_comments"])] if post["post_comments"] else "None"
+        "post_retailer": post.get("post_retailer"),
+        "post_votes": post.get("post_votes"),
+        "post_timestamp": post.get("post_timestamp")
     }
 
 def list_serial_post(posts) -> list:
     return[individual_serial_post(post) for post in posts]
 
-def individual_serial_comment(comment) -> dict:
+def individual_serial_comment(comment):
     return {
-        "id":str(comment["_id"]),
-        "user_id": comment["user_id"],
-        "post_id": comment["post_id"],
-        "comment_body": comment["comment_body"],
-        "comment_votes": comment["comment_votes"],
-        "comment_timestamp": comment["comment_timestamp"]
+        "id":str(comment.get("_id")),
+        "user_id": comment.get("user_id"),
+        "post_id": comment.get("post_id"),
+        "comment_body": comment.get("comment_body"),
+        "comment_votes": comment.get("comment_votes", None),
+        "comment_timestamp": comment.get("comment_timestamp", None)
     }
 
 def list_serial_comment(comments) -> list:
