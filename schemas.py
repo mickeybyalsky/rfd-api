@@ -1,9 +1,15 @@
 def individual_serial_user(user):
     return {
         "id":str(user["_id"]),
-        "user_display_name": user["user_display_name"],
-        "user_email": user["user_email"],
-        "user_location": user["user_location"]
+         "user_display_name": user.get("user_display_name", ""),
+        "user_email": user.get("user_email", ""),
+        "user_full_name": user.get("user_full_name", ""),
+        "user_location": user.get("user_location", ""),
+        "user_reputation": user.get("user_reputation", 0),
+        "user_post_count": user.get("user_post_count", 0),
+        "user_comment_count": user.get("user_comment_count", 0),
+        "user_join_date": user.get("user_join_date", ""),
+        "user_role": user.get("user_role", "")
     }
 
 def list_serial_user(users):

@@ -1,11 +1,17 @@
-from fastapi import APIRouter, HTTPException, Path, Body, status
-from models import UpdateUser, User
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+import pytz
+from models import UserOut, UserUpdate, UserIn, UserInDB
 from database import user_collection
 from schemas import list_serial_user, individual_serial_user
 from bson import ObjectId
 from fastapi.responses import JSONResponse
 from pymongo.collection import ReturnDocument
-
+from typing import Annotated
+from auth import get_password_hash
+from pymongo.errors import DuplicateKeyError
 '''
 USER FUNCTIONS
 CREATE user
@@ -25,19 +31,34 @@ router = APIRouter(
         response_model_by_alias=False,
         status_code=status.HTTP_201_CREATED
     )
-async def create_user(user: User):
-    new_user = user.model_dump(by_alias=True, exclude=["id"])
-    user_result = user_collection.insert_one(new_user)
+async def create_user(user: UserIn):
+    existing_user = user_collection.find_one({"username": user.user_display_name})
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
+
+    # Hash the password before storing
+    hashed_password = get_password_hash(user.user_password)
+
+    user_in_db = UserInDB(**user.model_dump(by_alias=True, exclude=["id"]),
+                          hashed_password=hashed_password,
+                          user_reputation=0,
+                          user_post_count=0,
+                          user_comment_count=0,
+                          user_join_date=datetime.now(pytz.timezone('EST')).strftime("%Y-%m-%d %H:%M"),
+                          user_role="user"
+                          )
+
+    user_result = user_collection.insert_one(user_in_db.model_dump(by_alias=True, exclude=["id"]))
 
     if user_result.acknowledged:
-        created_user = user_collection.find_one(
-            {"_id": user_result.inserted_id}
-        )
-    
-        created_user['_id'] = str(created_user['_id'])
+        created_user = user_collection.find_one({"_id": user_result.inserted_id})
+        created_user["_id"] = str(created_user["_id"])
 
-        return JSONResponse(content={"message": f"User {created_user['_id']} created", "user_data": created_user})
-    
+        created_user["user_join_date"] = str(created_user["user_join_date"]) + " EST"
+        created_user.pop("hashed_password", None)
+        
+        # return JSONResponse(content={"message": f"User {created_user['_id']} created"})
+        return JSONResponse(content={"message": f"User {created_user['_id']} created",  "user_data": created_user})
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User not created")
 
 @router.get("/",
@@ -63,8 +84,10 @@ async def get_user(user_id: str = Path(description="The ID of the user you'd lik
     user = user_collection.find_one({"_id": ObjectId(user_id)})
     
     if user:
-        user = individual_serial_user(user)
-        return JSONResponse(content=user, status_code=status.HTTP_200_OK)
+        # user_out = UserOut(**user).dict()
+        user_out = individual_serial_user(user)
+        # user_out["user_join_date"] = str(user_out["user_join_date"])
+        return JSONResponse(content={user_id : user_out}, status_code=status.HTTP_200_OK)
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found.")
 
@@ -72,7 +95,7 @@ async def get_user(user_id: str = Path(description="The ID of the user you'd lik
         summary="Update a user",
         response_model_by_alias=False,
         )
-async def update_user(user_id: str, user_data: UpdateUser = Body(..., description="The user data to update")):
+async def update_user(user_id: str, user_data: UserUpdate = Body(..., description="The user data to update")):
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
     
@@ -106,6 +129,7 @@ async def update_user(user_id: str, user_data: UpdateUser = Body(..., descriptio
         status_code=status.HTTP_204_NO_CONTENT
         )
 async def delete_user(user_id: str = Path(description="The ObjectID of the user you'd like to remove")):
+
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
 
