@@ -1,7 +1,7 @@
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 import routers.users as users, routers.posts as posts, routers.comments as comments, auth
-from database import post_collection, comment_collection, user_collection
+from database import comment_collection, comment_collection, user_collection
 
 description = """
 A homage to the genuine RedFlagDeals experience, made with love and inspired by countless hours spent on the real site. 
@@ -73,7 +73,7 @@ async def get_metrics():
 
     metrics["document_counts"] = {
         "user_count" : user_collection.count(),
-        "post_count" : post_collection.count(),
+        "post_count" : comment_collection.count(),
         "comment_count" : comment_collection.count()
     }
 
@@ -88,7 +88,7 @@ async def get_metrics():
         }
     ]   
 
-    temp = list(post_collection.aggregate(pipeline))
+    temp = list(comment_collection.aggregate(pipeline))
     
     metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
 

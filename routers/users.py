@@ -26,7 +26,7 @@ router = APIRouter(
 )
 
 @router.post("/register", 
-        summary="Register a user",
+        summary="Create/Register a user",
         response_model_by_alias=False,
         status_code=status.HTTP_201_CREATED,
         tags=['default', 'Users']
@@ -61,7 +61,8 @@ async def create_user(user: CreateUserRequest):
             return JSONResponse(content={"message": f"User {created_user['_id']} created", 
                                          "user_data": created_user})
     except DuplicateKeyError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")   
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                            detail="Username already registered. Please select a new username")   
 
 @router.get("/",
         summary="Read all users",

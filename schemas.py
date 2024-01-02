@@ -54,7 +54,7 @@ def list_serial_post(posts) -> list:
 def individual_serial_comment(comment):
     return {
         "id":str(comment.get("_id")),
-        "post_id": comment.get("post_id", ""),
+        "post_id": comment.get("comment_post_id", ""),
         "comment_author": comment.get("comment_author", ""),
         "comment_body": comment.get("comment_body"),
         "comment_votes": comment.get("comment_votes", None),

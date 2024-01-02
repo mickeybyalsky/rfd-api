@@ -10,13 +10,15 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class CommentBase(BaseModel):
     comment_body: str
-    post_id: str
 
 class CommentInDB(CommentBase):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    # id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    comment_post_id: str
     comment_author: str
     comment_votes: int = 0
     comment_timestamp: str = None
+    users_who_upvoted: List[str] = []
+    users_who_downvoted: List[str] = []
     
     # comment_author: User
 
