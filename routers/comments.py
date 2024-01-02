@@ -1,4 +1,6 @@
-from models import Comment, UpdateComment
+from datetime import datetime
+import pytz
+from models import CommentBase, CommentInDB, UpdateComment
 from fastapi import APIRouter, Path, Body, HTTPException, status
 from database import comment_collection, post_collection, user_collection
 from schemas import list_serial_comment, individual_serial_comment, list_serial_post
@@ -20,7 +22,7 @@ upvote/downvote comments
 
 router = APIRouter(
     tags=['Comments'],
-    prefix="/comments"
+    prefix="/api/v1/comments"
 
 )
 
@@ -29,14 +31,19 @@ router = APIRouter(
             response_model_by_alias=False,
             status_code=status.HTTP_201_CREATED
         )
-async def create_comment(new_comment: Comment):
-    if ObjectId.is_valid(new_comment.user_id):
-        # if user is a valid user in the db
-        user = user_collection.find_one({"_id": ObjectId(new_comment.user_id)})
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist. Comment must be created for an existing user.")
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
+async def create_comment(new_comment: CommentBase,
+                         ):
+    '''
+        user_id will be checked when auth is added.
+        TODO: assign user_id to comment with auth when added
+    '''
+    # if ObjectId.is_valid(new_comment.user_id):
+    #     # if user is a valid user in the db
+    #     user = user_collection.find_one({"_id": ObjectId(new_comment.user_id)})
+    #     if not user:
+    #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist. Comment must be created for an existing user.")
+    # else:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id format. It must be a valid ObjectId.")
     
     if ObjectId.is_valid(new_comment.post_id):
         # if post is a valid post in the db
@@ -46,6 +53,12 @@ async def create_comment(new_comment: Comment):
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid post_id format. It must be a valid ObjectId.")  
 
+    new_comment = CommentInDB(**new_comment.model_dump(by_alias=True, exclude=["id"]),
+                              comment_author="tempauthor",
+                              comment_votes=0,
+                              comment_timestamp= str(datetime.now(pytz.timezone('EST')).strftime("%Y-%m-%d %H:%M")) + " EST"
+                              )
+    
     new_comment = new_comment.model_dump(by_alias=True, exclude=["id"])
     comment_result = comment_collection.insert_one(new_comment)
 
@@ -90,7 +103,7 @@ async def get_comments_filtered(user_id: str = None, post_id: str = None):
     #     user =  user_collection.find_one({"_id": ObjectId(user_id)})
     #     if not user:
     #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    #     filter_params["user_id"] = ObjectId(user_id)
+    #     filter_params["user_id"] = str(user_id)
 
     if post_id:
         if not ObjectId.is_valid(post_id):
@@ -98,7 +111,7 @@ async def get_comments_filtered(user_id: str = None, post_id: str = None):
         post = post_collection.find_one({"_id": ObjectId(post_id)})
         if not post:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found.")
-        filter_params["post_id"] = ObjectId(post_id)
+        filter_params["post_id"] = str(post_id)
 
     print(filter_params)
     comments = comment_collection.find(filter_params)
@@ -150,7 +163,7 @@ async def delete_comment(comment_id: str = Path(description="The ObjectID of the
     if not ObjectId.is_valid(comment_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid comment_id format. It must be a valid ObjectId.")
 
-    result = comment_collection.delete_one({"_id": ObjectId(comment_id)})
+    result = comment_collection.find_one_and_delete({"_id": ObjectId(comment_id)})
     
     if result.deleted_count == 1:
         return JSONResponse(content={"message": f"Comment {comment_id} removed."}, status_code=status.HTTP_200_OK)

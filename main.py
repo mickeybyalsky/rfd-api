@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
 import routers.users as users, routers.posts as posts, routers.comments as comments, auth
+from database import post_collection, comment_collection, user_collection
 
 description = """
 A homage to the genuine RedFlagDeals experience, made with love and inspired by countless hours spent on the real site. 
@@ -58,6 +60,41 @@ app = FastAPI(
     },
 )
 
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(posts.router)
 app.include_router(comments.router)
+
+@app.get("/stats",
+         summary="Read API statistics",
+         )
+async def get_metrics():
+    metrics = {}
+
+    metrics["document_counts"] = {
+        "user_count" : user_collection.count(),
+        "post_count" : post_collection.count(),
+        "comment_count" : comment_collection.count()
+    }
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "total_post_views": {"$sum": "$post_views"},
+                "total_post_upvotes": {"$sum": "$users_who_upvoted"},
+                "total_post_downvotes": {"$sum": "$users_who_downvoted"}
+            }
+        }
+    ]   
+
+    temp = list(post_collection.aggregate(pipeline))
+    
+    metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
+
+    metrics["vote_counts"] = {
+        "total_upvotes_count_of_posts": temp[0]["total_post_upvotes"] if temp else 0,
+        "total_downvotes_count_of_posts": temp[0]["total_post_downvotes"] if temp else 0,
+    }
+
+    return JSONResponse(content={"metrics": metrics}, status_code=status.HTTP_200_OK)
