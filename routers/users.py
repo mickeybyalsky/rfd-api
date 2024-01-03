@@ -1,24 +1,13 @@
 from datetime import datetime
-from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
 from auth import get_current_active_user, get_password_hash
 from database import user_collection
-from models import CreateUserRequest, User, UserOut, UserUpdate
+from models.user_models import CreateUserRequest, User, UserOut, UserUpdate
 from schemas import list_serial_user, individual_serial_user
 from bson import ObjectId
 from fastapi.responses import JSONResponse
 from pymongo.collection import ReturnDocument
 from pymongo.errors import DuplicateKeyError
-
-
-'''
-USER FUNCTIONS
-CREATE user
-READ user
-READ all users 
-UPDATE user
-DELETE user
-'''
 
 router = APIRouter(
     prefix='/api/v1/users',
@@ -26,10 +15,11 @@ router = APIRouter(
 )
 
 @router.post("/register", 
-        summary="Create/Register a user",
+        summary="Register a user",
         response_model_by_alias=False,
         status_code=status.HTTP_201_CREATED,
-        tags=['default', 'Users']
+        tags=['default', 'Users'],
+        description="Create a new user."
     )
 async def create_user(user: CreateUserRequest):
     try:
@@ -37,7 +27,7 @@ async def create_user(user: CreateUserRequest):
         
         if existing_user is not None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                                detail="Username already registered")
+                                detail="Username already registered. Please select another username.")
 
         new_user = User(**user.dict(),
                             hashed_password = get_password_hash(user.password),
@@ -67,6 +57,7 @@ async def create_user(user: CreateUserRequest):
 @router.get("/",
         summary="Read all users",
         response_model_by_alias=False,
+        description="Retrive all users."
         )
 async def get_all_users():
     users = list_serial_user(user_collection.find(projection={"hashed_password": 0}))
@@ -79,6 +70,7 @@ async def get_all_users():
 @router.get("/me",
         summary="Read your user",
         response_model_by_alias=False,
+        description="Retrive information about the logged in user."
         )
 async def get_user(current_user: User = Depends(get_current_active_user)):
 
@@ -102,6 +94,7 @@ async def get_user(current_user: User = Depends(get_current_active_user)):
 @router.get("/{username}",
         summary="Read a user",
         response_model_by_alias=False,
+        description="Retrive a user by the username"
         )
 async def get_user(username: str = Path(description="The username of the user you want to view")):
     user_in_db = user_collection.find_one({"username": username}, 
@@ -118,6 +111,7 @@ async def get_user(username: str = Path(description="The username of the user yo
 @router.put("/{username}",
         summary="Update a user",
         response_model_by_alias=False,
+        description="Updates a user by the username."
         )
 async def update_user(username: str = Path(..., description="The username of the user you want to update"),
                       user_data: UserUpdate = Body(..., description="The user data to update"),
@@ -164,7 +158,8 @@ async def update_user(username: str = Path(..., description="The username of the
 @router.delete("/{username}",
         summary="Delete a user",
         response_model_by_alias=False,
-        status_code=status.HTTP_204_NO_CONTENT
+        status_code=status.HTTP_204_NO_CONTENT,
+        description="Deletes a user by the username."
         )
 async def delete_user(username: str = Path(description="The username of the user you want to remove"),
                       current_user: User = Depends(get_current_active_user)):

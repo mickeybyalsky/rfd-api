@@ -27,7 +27,8 @@ get posts by retailer
 
 @router.post("/",
             summary="Create a post",
-            status_code=status.HTTP_201_CREATED
+            status_code=status.HTTP_201_CREATED,
+            description="Create a new deal thread."
         )
 async def create_post(post: PostIn,
                       current_user: User = Depends(get_current_active_user)):
@@ -55,7 +56,8 @@ async def create_post(post: PostIn,
 
 @router.get("/",
             summary="Read all posts",
-            response_model_by_alias=False
+            response_model_by_alias=False,
+            description="Retrive all posts."
             )
 async def get_all_posts():
     posts = list_serial_post(post_collection.find())
@@ -68,6 +70,7 @@ async def get_all_posts():
 @router.get("/{post_id}",
             summary="Read a post",
             response_model_by_alias=False,
+            description="Retrive a post by the post_id"
             )
 async def get_post(post_id: str = Path(description="The ID of the post you would like to view")):
     if not ObjectId.is_valid(post_id):
@@ -95,10 +98,10 @@ async def get_post(post_id: str = Path(description="The ID of the post you would
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"Post {post_id} not found.")
 
-
 @router.get("/{username}",
             summary="Read all posts by a specific user",
-            include_in_schema=False
+            include_in_schema=False,
+            description="Retrive all posts by the provided username"
             )
 async def get_all_posts_by_user(username: str = Path(description="The username of the author whose posts you would like to get.")):
     posts = list_serial_post(post_collection.find({"username": username}))
@@ -113,6 +116,7 @@ async def get_all_posts_by_user(username: str = Path(description="The username o
 @router.put("/{post_id}",
               summary="Update a post",
               response_model_by_alias=False,
+              description="Update a post by the post_id."
               )
 async def update_post(post_id: str, 
                       post_data: PostUpdate = Body(..., description="The post data to update"),
@@ -153,7 +157,8 @@ async def update_post(post_id: str,
 @router.delete("/{post_id}",
                summary="Delete a post",
                response_model_by_alias=False,
-               status_code=status.HTTP_204_NO_CONTENT
+               status_code=status.HTTP_204_NO_CONTENT,
+               description="Retrive a user by the username"
                )
 async def delete_post(post_id: str = Path(description="The ObjectID of the post you would like to remove"),
                       current_user: User = Depends(get_current_active_user)):
@@ -181,6 +186,7 @@ async def delete_post(post_id: str = Path(description="The ObjectID of the post 
 @router.post("/{post_id}/upvote",
              summary="Upvote a post",
              response_model_by_alias=False,
+             description="Upvote a post by the post_id",
              status_code=status.HTTP_200_OK
              )
 async def upvote_post(post_id: str = Path(description="The ID of the post to upvote"),
@@ -236,6 +242,7 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
 @router.post("/{post_id}/downvote",
              summary="Downvote a post",
              response_model_by_alias=False,
+             description="Downvote a post by the post_id",
              status_code=status.HTTP_200_OK
              )
 async def downvote_post(post_id: str = Path(description="The ID of the post to downvote"),

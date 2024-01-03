@@ -1,7 +1,8 @@
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 import routers.users as users, routers.posts as posts, routers.comments as comments, auth
-from database import comment_collection, comment_collection, user_collection
+from database import comment_collection, post_collection, user_collection
+from mangum import Mangum
 
 description = """
 A homage to the genuine RedFlagDeals experience, made with love and inspired by countless hours spent on the real site. 
@@ -11,7 +12,7 @@ Inspired by a few dabs at the real RFD by me and my friends, such as "How do I d
 I've spent loads of hours on the site in the past year and scored some awsome deals myself.
 <br>
 <br>
-This API serves to recreate a fully functional backend of RedFlagDeals, by having users, posts, and comments and all the interaction that comes along with it, on a mock MongoDB database. 
+This RESTful API serves to recreate a fully functional backend of RedFlagDeals, by having users, posts, and comments and all the interaction that comes along with it, on a mock MongoDB database. 
 <br>
 Have some fun by creating a user, creating a post or reading some posts and maybe leave a comment on an exisiting post!
 <br>
@@ -25,28 +26,35 @@ Made with Python, FastAPI and MongoDB. Hosted on AWS
 
 You will be able to:
 
-* Create users
-* Read users
-* Update users
-* Delete users
+* Create/Register a user
+* Read all users
+* Read a user
+* Update a users
+* Delete a user
 
 ## Posts
 
 You will be able to:
 
-* Create posts
-* Read posts
-* Update posts
-* Delete posts
+* Create a post
+* Read all posts
+* Read a post
+* Update a post
+* Delete a post
+* Upvote a post
+* Downvote a post
 
 ## Comments
 
 You will be able to:
 
-* Create comments
-* Read comments
-* Update comments
-* Delete comments
+* Create a comment
+* Read a comment
+* Read comments filtered by post and/or user
+* Update a comment
+* Delete a comment
+* Upvote a comment
+* Downvote a comment
 """
 
 app = FastAPI(
@@ -59,10 +67,18 @@ app = FastAPI(
         "email": "mickeybyalsky@gmail.com",
     },
 )
+handler = Mangum(app)
 
+# include the router for auth
 app.include_router(auth.router)
+
+# include the router for user routes
 app.include_router(users.router)
+
+# include the router for post routes
 app.include_router(posts.router)
+
+# include the router for comment routes
 app.include_router(comments.router)
 
 @app.get("/stats",
@@ -73,7 +89,7 @@ async def get_metrics():
 
     metrics["document_counts"] = {
         "user_count" : user_collection.count(),
-        "post_count" : comment_collection.count(),
+        "post_count" : post_collection.count(),
         "comment_count" : comment_collection.count()
     }
 
@@ -82,19 +98,20 @@ async def get_metrics():
             "$group": {
                 "_id": None,
                 "total_post_views": {"$sum": "$post_views"},
-                "total_post_upvotes": {"$sum": "$users_who_upvoted"},
-                "total_post_downvotes": {"$sum": "$users_who_downvoted"}
+                # "total_post_upvotes": {"$sum": {"$size": "$users_who_upvoted"}},
+                # "total_post_downvotes": {"$sum": {"$size": "$users_who_downvoted"}}
             }
         }
     ]   
 
-    temp = list(comment_collection.aggregate(pipeline))
-    
+    temp = list(post_collection.aggregate(pipeline))
+    print(temp)
     metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
 
-    metrics["vote_counts"] = {
-        "total_upvotes_count_of_posts": temp[0]["total_post_upvotes"] if temp else 0,
-        "total_downvotes_count_of_posts": temp[0]["total_post_downvotes"] if temp else 0,
-    }
+    # metrics["vote_counts"] = {
+    #     "total_upvotes_count_of_posts": temp[0]["total_post_upvotes"] if temp else 0,
+    #     "total_downvotes_count_of_posts": temp[0]["total_post_downvotes"] if temp else 0,
+    # }
+    
 
     return JSONResponse(content={"metrics": metrics}, status_code=status.HTTP_200_OK)

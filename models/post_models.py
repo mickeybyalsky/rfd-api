@@ -5,52 +5,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
 from typing_extensions import Annotated
 from datetime import datetime
 from pytz import timezone
-
 PyObjectId = Annotated[str, BeforeValidator(str)]
-
-class CommentBase(BaseModel):
-    comment_body: str
-
-class CommentInDB(CommentBase):
-    # id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    comment_post_id: str
-    comment_author: str
-    comment_votes: int = 0
-    comment_timestamp: str = None
-    users_who_upvoted: List[str] = []
-    users_who_downvoted: List[str] = []
-    
-    # comment_author: User
-
-    model_config = ConfigDict(
-    populate_by_name=True,
-    arbitrary_types_allowed=True
-    # json_schema_extra={
-    #     "example": {
-    #         "user_id": "dsaadas",
-    #         "user_display_name": "jdoe",
-    #         "user_email": "jdoe@example.com",
-    #         "user_location": "Toronto"
-    #     }
-    # }
-    )
-
-class UpdateComment(BaseModel):
-    comment_body: Optional[str] = None
-    
-
-    model_config = ConfigDict(
-    populate_by_name=True,
-    arbitrary_types_allowed=True
-    # json_schema_extra={
-    #     "example": {
-    #         "user_id": "dsaadas",
-    #         "user_display_name": "jdoe",
-    #         "user_email": "jdoe@example.com",
-    #         "user_location": "Toronto"
-    #     }
-    # }
-    )
 
 class PostBase(BaseModel):
     # post_retailer: str
@@ -62,6 +17,7 @@ class PostBase(BaseModel):
     post_sale_price: str | None
     post_product_discount: str | None
 
+from typing import List
 from pydantic import Field
 
 class PostIn(PostBase):
@@ -147,65 +103,3 @@ class PostUpdate(PostBase):
         example="75%",
         description="The discount percentage of the product."
     )
-
-class CreateUserRequest(BaseModel):
-    username: str
-    password: str
-    user_email: str | None = None
-    user_full_name: str | None = None
-    user_location: str | None = None
-
-class User(BaseModel):
-    username: str
-    hashed_password: str
-    user_email: str | None = None
-    user_full_name: str | None = None
-    user_location: str | None = None
-    user_reputation: int = 0
-    user_post_count: int = 0
-    user_comment_count: int = 0
-    user_join_date: str = None
-    user_role: str = "user"
-
-class UserUpdate(BaseModel):
-    user_email: str | None = None
-    user_full_name: str | None = None
-    user_location: str | None = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        arbitrary_types_allowed=True,
-        json_schema_extra={
-            "example": {
-                "user_email": "this_is_a_password",
-                "user_full_name": "Jane Doe",
-                "user_location": "Toronto",
-            }
-        }
-    )
-
-# class UserInDB(BaseModel):
-#     # id: Optional[PyObjectId] = Field(alias="_id", default=None)
-#     user_reputation: int = 0
-#     user_post_count: int = 0
-#     user_comment_count: int = 0
-#     user_join_date: str = None
-#     user_role: str = "user"
-
-class UserOut(BaseModel):
-    username: str
-    user_email: str | None = None
-    user_full_name: str | None = None
-    user_location: str | None = None
-    user_reputation: int = 0
-    user_post_count: int = 0
-    user_comment_count: int = 0
-    user_join_date: str = None
-    user_role: str = "user"
-    
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: str | None = None
