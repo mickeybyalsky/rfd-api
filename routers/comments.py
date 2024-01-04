@@ -3,7 +3,7 @@ from auth import get_current_active_user
 from models import CommentBase, CommentInDB, UpdateComment, User
 from fastapi import APIRouter, Depends, Path, Body, HTTPException, status
 from database import comment_collection, post_collection, user_collection
-from schemas import list_serial_comment, individual_serial_comment, list_serial_post
+from schemas import list_serial_comment
 from bson import ObjectId
 from fastapi.responses import JSONResponse
 from pymongo.collection import ReturnDocument
@@ -19,7 +19,7 @@ router = APIRouter(
             status_code=status.HTTP_201_CREATED
         )
 async def create_comment(new_comment: CommentBase,
-                         post_id: str,
+                         post_id: str = Path(description="The ObjectID of the post you would like to comment on."),
                          current_user: User = Depends(get_current_active_user)
                          ):
 
@@ -60,7 +60,7 @@ async def create_comment(new_comment: CommentBase,
             description="Retrive a comment object by the comment_id.",
             response_model_by_alias=False,
             )
-async def get_comment(comment_id: str = Path(description="The ID of the commment you'd like to view")):
+async def get_comment(comment_id: str = Path(description="The ID of the commment you would like to view")):
    if not ObjectId.is_valid(comment_id):
       raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                            detail="Invalid comment_id format. It must be a valid ObjectId")
@@ -104,20 +104,25 @@ async def get_comments_filtered(username: str = None,
 
     if comments.count() > 0:
         comments_result = list_serial_comment(comments)
-        return JSONResponse(content={f"Comments for the query {filter_params} ":comments_result}, 
+        if filter_params:
+            return JSONResponse(content={f"Comments for the query {filter_params} ":comments_result}, 
                             status_code=status.HTTP_200_OK)
-    else:
-        all_comments = comment_collection.find()
-        all_comments_result = list_serial_comment(all_comments)
-        return JSONResponse(content={f"No filters provided. All commnents were returned ":all_comments_result}, 
+        else:
+             return JSONResponse(content={f"No filters provided. All commnents were returned ":comments_result}, 
                             status_code=status.HTTP_200_OK)
+
+    # else:
+    #     all_comments = comment_collection.find()
+    #     all_comments_result = list_serial_comment(all_comments)
+    #     return JSONResponse(content={f"No filters provided. All commnents were returned ":all_comments_result}, 
+    #                         status_code=status.HTTP_200_OK)
 
 @router.put("/api/v1/comments/{comment_id}",
               summary="Update a Comment",
               description="Updates a comment object by the comment_id and provided request body.",
               response_model_by_alias=False,
               )
-async def update_comment(comment_id: str, 
+async def update_comment(comment_id: str = Path(description="The ObjectID of the comment you would like to update."), 
                          current_user: User = Depends(get_current_active_user),
                          comment_data: UpdateComment = Body(..., description="The comment data to update")):
     
@@ -161,7 +166,7 @@ async def update_comment(comment_id: str,
                description="Delete a comment object by the comment_id",
                status_code=status.HTTP_204_NO_CONTENT
                )
-async def delete_comment(comment_id: str = Path(description="The ObjectID of the comment you'd like to remove"),
+async def delete_comment(comment_id: str = Path(description="The ObjectID of the comment you would like to remove"),
                          current_user: User = Depends(get_current_active_user)):
    
     if not ObjectId.is_valid(comment_id):

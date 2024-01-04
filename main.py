@@ -81,6 +81,10 @@ app.include_router(posts.router)
 # include the router for comment routes
 app.include_router(comments.router)
 
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
+
 @app.get("/stats",
          summary="Read API statistics",
          )
@@ -98,20 +102,19 @@ async def get_metrics():
             "$group": {
                 "_id": None,
                 "total_post_views": {"$sum": "$post_views"},
-                # "total_post_upvotes": {"$sum": {"$size": "$users_who_upvoted"}},
-                # "total_post_downvotes": {"$sum": {"$size": "$users_who_downvoted"}}
+                "total_post_upvotes": {"$sum": {"$size": {"$ifNull": ["$users_who_upvoted", []]}}},
+                "total_post_downvotes": {"$sum": {"$size": {"$ifNull": ["$users_who_downvoted", []]}}}
             }
         }
     ]   
 
     temp = list(post_collection.aggregate(pipeline))
-    print(temp)
+    
     metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
 
-    # metrics["vote_counts"] = {
-    #     "total_upvotes_count_of_posts": temp[0]["total_post_upvotes"] if temp else 0,
-    #     "total_downvotes_count_of_posts": temp[0]["total_post_downvotes"] if temp else 0,
-    # }
+    metrics["vote_counts"] = {
+        "total_post_upvotes_count": temp[0]["total_post_upvotes"] if temp else 0,
+        "total_post_downvotes_count": temp[0]["total_post_downvotes"] if temp else 0,
+    }
     
-
     return JSONResponse(content={"metrics": metrics}, status_code=status.HTTP_200_OK)

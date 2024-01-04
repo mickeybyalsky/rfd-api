@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
-import pytz
 from auth import get_current_active_user
-from models import PostIn, PostInDB, PostUpdate, UpdateComment, User
+from models import PostIn, PostInDB, PostUpdate, User
 from database import post_collection, comment_collection 
 from schemas import list_serial_comment, list_serial_post, individual_serial_post
 from fastapi.responses import JSONResponse
@@ -72,7 +71,7 @@ async def get_all_posts():
             response_model_by_alias=False,
             description="Retrive a post by the post_id"
             )
-async def get_post(post_id: str = Path(description="The ID of the post you would like to view")):
+async def get_post(post_id: str = Path(description="The ObjectID of the post you would like to view")):
     if not ObjectId.is_valid(post_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="Invalid post_id format. It must be a valid ObjectId.")
@@ -112,13 +111,12 @@ async def get_all_posts_by_user(username: str = Path(description="The username o
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                         detail="No posts found.")
 
-
 @router.put("/{post_id}",
               summary="Update a post",
               response_model_by_alias=False,
               description="Update a post by the post_id."
               )
-async def update_post(post_id: str, 
+async def update_post(post_id: str = Path(description="The ObjectID of the post you would like to update"), 
                       post_data: PostUpdate = Body(..., description="The post data to update"),
                       current_user: User = Depends(get_current_active_user)):
     
@@ -218,7 +216,7 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
                                             }
                                             )
         if result.modified_count == 1:
-            return JSONResponse(content=f"post {post_id} upvoted", 
+            return JSONResponse(content=f"Post {post_id} upvoted", 
                                 status_code=status.HTTP_200_OK)
     
     # user in downvoted and not in upvoted -> remove from down, add to up and add 2 (1 to cancel downvote, 1 for upvote)
@@ -232,7 +230,7 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
                                             }
                                             )
         if result.modified_count == 1:
-            return JSONResponse(content=f"post {post_id} upvoted", 
+            return JSONResponse(content=f"Post {post_id} upvoted", 
                                 status_code=status.HTTP_200_OK)
 
     if user in existing_post["users_who_upvoted"] and user not in existing_post["users_who_downvoted"]:
@@ -295,4 +293,4 @@ async def downvote_post(post_id: str = Path(description="The ID of the post to d
 
     if user in existing_post["users_who_downvoted"] and user not in existing_post["users_who_upvoted"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
-                            detail="You already upvoted this post!")
+                            detail="You already downvoted this post!")

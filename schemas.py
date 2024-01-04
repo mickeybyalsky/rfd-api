@@ -34,7 +34,7 @@ def list_serial_user(users):
 
 def individual_serial_post(post):
     return {
-        "id": str(post["_id"]),
+        # "id": str(post["_id"]),
         "post_title": post.get("post_title",""),
         "post_description": post.get("post_description",""),
         "post_product_category": post.get("post_product_category",""),
