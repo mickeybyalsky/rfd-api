@@ -1,3 +1,5 @@
 .env
 todo.txt
 dependencies
+*.zip
+__pycache__/
