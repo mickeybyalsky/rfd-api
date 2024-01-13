@@ -15,7 +15,7 @@ Have some fun by creating a user, then creating a post or reading some posts, an
 **Steps**: To use the endpoints, expand the dropdown of an endpoint, press "Try it out", fill in any fields if applicable and hit execute!
 <br>
 <br>
-**Using Authorized Endpoints:**: You will first need to register a user, then use the authorize button to log into that user. Then you are all set to use all the endpoints!
+**Using Authorized Endpoints:** You will first need to register a user, then use the authorize button to log into that user. Then you are all set to use all the endpoints!
 <br>
 <br>
 <br>
