@@ -1,10 +1,6 @@
 # RedFlagDeals-REST-API
 
-A recreation to the RedFlagDeals experience, made for fun and to explore the world of REST API's.
-<br>
-Inspired by a few dabs at the real RFD by me and my friends, such as "How do I downvote a comment?", I said I can make it happen.
-<br>
-I've spent loads of hours on the site in the past year and scored some awsome deals myself. I wanted to learn about REST API's and wondered what better way to do it by trying to recreate a site I loved.
+A recreation to the RedFlagDeals experience, made for fun and to explore the world of REST API's. Inspired by a few dabs at the real RFD by me and my friends, such as "How do I downvote a comment?", I said I can make it happen. I've spent loads of hours on the site in the past year and scored some awsome deals myself. I wanted to learn about REST API's and wondered what better way to do it by trying to recreate a site I loved.
 <br>
 <br>
 This RESTful API serves to recreate a fully functional backend of RedFlagDeals, by having users, posts, and comments and all the interaction that comes along with it, on a MongoDB mock database. 
@@ -66,4 +62,12 @@ You will be able to:
 * Better experience for replying to comments
 
 ## Screenshots
-![Screenshot 2024-01-12 at 12 35 21 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/a99b6360-a52e-41d2-a038-2934a5b5421d)
+![Screenshot 2024-01-14 at 6 23 53 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/895448a8-dd17-40b2-9447-4a2e51884136)
+Authorization, API Stats, and User endpoints
+
+![Screenshot 2024-01-14 at 6 24 22 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/ef128186-6e0e-4e7d-b252-cf910cbd7952)
+Posts and Comments endpoints
+
+![Screenshot 2024-01-14 at 6 25 06 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/c2c1c311-e6e4-4496-bb60-a45d8f2bffc6)
+Example endpoint documentation
+
