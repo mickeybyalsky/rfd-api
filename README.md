@@ -62,12 +62,13 @@ You will be able to:
 * Better experience for replying to comments
 
 ## Screenshots
-![Screenshot 2024-01-14 at 6 23 53 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/895448a8-dd17-40b2-9447-4a2e51884136)
 Authorization, API Stats, and User endpoints
+![Screenshot 2024-01-14 at 6 23 53 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/895448a8-dd17-40b2-9447-4a2e51884136)
 
-![Screenshot 2024-01-14 at 6 24 22 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/ef128186-6e0e-4e7d-b252-cf910cbd7952)
 Posts and Comments endpoints
+![Screenshot 2024-01-14 at 6 24 22 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/ef128186-6e0e-4e7d-b252-cf910cbd7952)
 
-![Screenshot 2024-01-14 at 6 25 06 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/c2c1c311-e6e4-4496-bb60-a45d8f2bffc6)
 Example endpoint documentation
+![Screenshot 2024-01-14 at 6 25 06 PM](https://github.com/mickeybyalsky/rfd-api/assets/87655204/c2c1c311-e6e4-4496-bb60-a45d8f2bffc6)
+
 
