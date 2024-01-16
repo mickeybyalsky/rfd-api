@@ -82,21 +82,21 @@ app = FastAPI(
         "name": "Mickey Byalsky",
         "url": "https://www.linkedin.com/in/mickeybyalsky/",
         "email": "mickeybyalsky@gmail.com",
-    },
+    }
 )
-handler = Mangum(app)
+
 
 # include the router for auth
-app.include_router(auth.router)
+app.include_router(auth.router, prefix="/api/v1")
 
 # include the router for user routes
-app.include_router(users.router)
+app.include_router(users.router, prefix="/api/v1")
 
 # include the router for post routes
-app.include_router(posts.router)
+app.include_router(posts.router, prefix="/api/v1")
 
 # include the router for comment routes
-app.include_router(comments.router)
+app.include_router(comments.router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():

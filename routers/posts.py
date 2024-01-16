@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
 from auth import get_current_active_user
 from models import PostIn, PostInDB, PostUpdate, User
-from database import post_collection, comment_collection 
+from database import post_collection, comment_collection, user_collection
 from schemas import list_serial_comment, list_serial_post, individual_serial_post
 from fastapi.responses import JSONResponse
 from bson import ObjectId
@@ -9,10 +9,24 @@ from pymongo.collection import ReturnDocument
 from datetime import datetime
 
 router = APIRouter(
-    prefix='/api/v1/posts',
+    prefix='/posts',
     tags=['Posts']
 )
 
+'''
+user_reputation: int = 0
+user_post_count: int = 0
+user_comment_count: int = 0
+
+user_reputation goes UP when someone UPvotes OP's post OR comment
+user_reputation goes DOWN when someone DOWNvotes OP's post OR comment
+
+user_post_count goes UP when OP creates a new post
+user_post_count goes DOWN when OP deletes a post
+
+user_comment_count goes UP when OP posts a new comment
+user_comment_count goes DOWN when OP deletes a comment
+'''
 ''' POST FUNCTIONS
 CREATE post
 READ post
@@ -46,12 +60,17 @@ async def create_post(post: PostIn,
     
     if post_result.acknowledged:
         created_post = post_collection.find_one({"_id": post_result.inserted_id})
-        created_post['_id'] = str(created_post['_id'])                                  
+        created_post['_id'] = str(created_post['_id'])          
+        user_collection.update_one({"username": current_user.username},
+                                    {"$inc": {"user_post_count": 1}}
+        )  
+                  
         return JSONResponse(content={"message": f"Post {created_post['_id']} created", 
                                      "post_data": created_post})
     
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                         detail="Post not created")
+
 
 @router.get("/",
             summary="Read all posts",
@@ -178,6 +197,9 @@ async def delete_post(post_id: str = Path(description="The ObjectID of the post 
     result = post_collection.delete_one({"_id": ObjectId(post_id)})
     
     if result.deleted_count == 1:
+        user_collection.update_one({"username": current_user.username},
+                                    {"$inc": {"user_post_count": -1}}
+        )  
         return JSONResponse(content={"message": f"Post {post_id} removed."}, 
                             status_code=status.HTTP_200_OK)
 
@@ -236,7 +258,12 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
     if user in existing_post["users_who_upvoted"] and user not in existing_post["users_who_downvoted"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="You already upvoted this post!")
-
+    
+    user_collection.update_one(
+        {"username": existing_post["post_author"]},
+        {"$inc": {"user_reputation": 1}},
+    )
+  
 @router.post("/{post_id}/downvote",
              summary="Downvote a post",
              response_model_by_alias=False,
@@ -294,3 +321,8 @@ async def downvote_post(post_id: str = Path(description="The ID of the post to d
     if user in existing_post["users_who_downvoted"] and user not in existing_post["users_who_upvoted"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="You already downvoted this post!")
+
+    user_collection.update_one(
+        {"username": existing_post["post_author"]},
+        {"$inc": {"user_reputation": -1}},
+    )

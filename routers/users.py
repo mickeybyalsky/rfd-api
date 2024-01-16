@@ -10,7 +10,7 @@ from pymongo.collection import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(
-    prefix='/api/v1/users',
+    prefix='/users',
     tags=['Users'],
 )
 

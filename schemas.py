@@ -2,20 +2,23 @@ from models import UserOut
 
 
 def individual_serial_user(user):
+    user_counts =  {"user_reputation": user.get("user_reputation", 0),
+        "user_post_count": user.get("user_post_count", 0),
+        "user_comment_count": user.get("user_comment_count", 0)
+    }
     return {
-        "username": user.get("username", ""),
+        "user_id": str(user.get("_id", "")),
+        "user_name": user.get("username", ""),
         "user_email": user.get("user_email", ""),
         "user_full_name": user.get("user_full_name", ""),
         "user_location": user.get("user_location", ""),
-        "user_reputation": user.get("user_reputation", 0),
-        "user_post_count": user.get("user_post_count", 0),
-        "user_comment_count": user.get("user_comment_count", 0),
         "user_join_date": user.get("user_join_date", ""),
-        "user_role": user.get("user_role", "")
+        "user_role": user.get("user_role", ""),
+        "user_activity": user_counts
     }
     
 def list_serial_user(users):
-    return {str(user["_id"]): individual_serial_user(user) for user in users}
+    return {str(user["username"]): individual_serial_user(user) for user in users}
 
 def individual_serial_post(post):
     return {

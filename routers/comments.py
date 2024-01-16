@@ -12,7 +12,7 @@ router = APIRouter(
     tags=['Comments'],
 )
 
-@router.post("/api/v1/{post_id}/comments",
+@router.post("/{post_id}/comments",
             summary="Create a comment",
             description="Create a comment for the provided post_id",
             response_model_by_alias=False,
@@ -46,7 +46,9 @@ async def create_comment(new_comment: CommentBase,
         created_comment = comment_collection.find_one(
             {"_id": comment_result.inserted_id}
         )
-
+        user_collection.update_one({"username": current_user.username},
+                                    {"$inc": {"user_comment_count": 1}})                        
+        
         created_comment['_id'] = str(created_comment['_id'])
 
         return JSONResponse(content={"message": f"Comment {created_comment['_id']} created", 
@@ -55,7 +57,7 @@ async def create_comment(new_comment: CommentBase,
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                         detail="Comment not created")
  
-@router.get("/api/v1/comments/{comment_id}",
+@router.get("/comments/{comment_id}",
             summary="Read a comment",
             description="Retrive a comment object by the comment_id.",
             response_model_by_alias=False,
@@ -74,7 +76,7 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                        detail="Comment not found.")
 
-@router.get("/api/v1/comments/",
+@router.get("/comments/",
             summary="Read comments by post and/or user",
             description="Retrive all comments by the provided filter(s), or returns all comments if no parameter's provided.",
             response_model_by_alias=False,
@@ -117,7 +119,7 @@ async def get_comments_filtered(username: str = None,
     #     return JSONResponse(content={f"No filters provided. All commnents were returned ":all_comments_result}, 
     #                         status_code=status.HTTP_200_OK)
 
-@router.put("/api/v1/comments/{comment_id}",
+@router.put("/comments/{comment_id}",
               summary="Update a Comment",
               description="Updates a comment object by the comment_id and provided request body.",
               response_model_by_alias=False,
@@ -160,7 +162,7 @@ async def update_comment(comment_id: str = Path(description="The ObjectID of the
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"Comment {comment_id} not found.")
     
-@router.delete("/api/v1/comments/{comment_id}",
+@router.delete("/comments/{comment_id}",
                summary="Delete a comment",
                response_model_by_alias=False,
                description="Delete a comment object by the comment_id",
@@ -186,13 +188,16 @@ async def delete_comment(comment_id: str = Path(description="The ObjectID of the
     result = comment_collection.delete_one({"_id": ObjectId(comment_id)})
     
     if result.deleted_count == 1:
+        user_collection.update_one({"username": current_user.username},
+                                    {"$inc": {"user_comment_count": -1}}
+        )
         return JSONResponse(content={"message": f"Comment {comment_id} removed."},
                             status_code=status.HTTP_200_OK)
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"Comment {comment_id} not found.")
 
-@router.post("/api/v1/comments/{comment_id}/upvote",
+@router.post("/comments/{comment_id}/upvote",
              summary="Upvote a comment",
              response_model_by_alias=False,
              description="Upvote a comment object based on the comment_id",
@@ -249,7 +254,12 @@ async def upvote_comment(comment_id: str = Path(description="The ID of the commm
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="You already upvoted this comment!")
 
-@router.post("/api/v1/comments/{comment_id}/downvote",
+    user_collection.update_one(
+        {"username": existing_comment["comment_author"]},
+        {"$inc": {"user_reputation": 1}},
+    )
+
+@router.post("/comments/{comment_id}/downvote",
              summary="Downvote a comment",
              response_model_by_alias=False,
              description="Downvote a comment object based on the comment_id",
@@ -305,3 +315,8 @@ async def downvote_comment(comment_id: str = Path(description="The ID of the com
     if user in existing_comment["users_who_downvoted"] and user not in existing_comment["users_who_upvoted"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="You already downvoted this comment!")
+
+    user_collection.update_one(
+        {"username": existing_comment["comment_author"]},
+        {"$inc": {"user_reputation": -1}},
+    )
