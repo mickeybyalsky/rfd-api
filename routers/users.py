@@ -122,7 +122,7 @@ async def update_user(username: str = Path(..., description="The username of the
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail=f"User {username} not found.") 
     
-    if existing_user["post_author"] != current_user.username:
+    if existing_user["username"] != current_user.username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                             detail="You are not authorized to update this user.")
     

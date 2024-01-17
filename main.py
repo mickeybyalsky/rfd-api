@@ -2,7 +2,7 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 import routers.users as users, routers.posts as posts, routers.comments as comments, auth
 from database import comment_collection, post_collection, user_collection
-from mangum import Mangum
+
 
 description = """
 A recreation to the RedFlagDeals experience, made for fun and to explore the world of REST API's.
@@ -109,9 +109,9 @@ async def get_metrics():
     metrics = {}
 
     metrics["document_counts"] = {
-        "user_count" : user_collection.count(),
-        "post_count" : post_collection.count(),
-        "comment_count" : comment_collection.count()
+        "user_count" : user_collection.count_documents({}),
+        "post_count" : post_collection.count_documents({}),
+        "comment_count" : comment_collection.count_documents({})
     }
 
     pipeline = [

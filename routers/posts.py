@@ -13,20 +13,7 @@ router = APIRouter(
     tags=['Posts']
 )
 
-'''
-user_reputation: int = 0
-user_post_count: int = 0
-user_comment_count: int = 0
 
-user_reputation goes UP when someone UPvotes OP's post OR comment
-user_reputation goes DOWN when someone DOWNvotes OP's post OR comment
-
-user_post_count goes UP when OP creates a new post
-user_post_count goes DOWN when OP deletes a post
-
-user_comment_count goes UP when OP posts a new comment
-user_comment_count goes DOWN when OP deletes a comment
-'''
 ''' POST FUNCTIONS
 CREATE post
 READ post
@@ -105,7 +92,7 @@ async def get_post(post_id: str = Path(description="The ObjectID of the post you
     if post:
         response_data["post"] = individual_serial_post(post)
 
-    if comments.count() > 0:
+    if comment_collection.count_documents({"comment_post_id": post_id}) > 0:
         comments =  list_serial_comment(comments)
         response_data["comments"] = comments
 
