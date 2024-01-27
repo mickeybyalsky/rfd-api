@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Body, Query, status
 from auth import get_current_active_user
 from models import PostIn, PostInDB, PostUpdate, User
 from database import post_collection, comment_collection, user_collection
@@ -40,7 +40,8 @@ async def create_post(post: PostIn,
                         post_author = current_user.username,
                         post_views = 0,
                         users_who_downvoted=[],
-                        users_who_upvoted=[]
+                        users_who_upvoted=[],
+                        post_comments_count=0
                         )
 
     post_result = post_collection.insert_one(dict(new_post))
@@ -71,6 +72,50 @@ async def get_all_posts():
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                         detail="No posts found.")
+
+@router.get("",
+            summary="Read posts with filters",
+            description="Retrieve posts with filter for post author."
+            # Leave fields blank to retrive all posts.
+            )
+async def get_posts_filtered(username: str = Query(description="Optional. The post author to filter posts"),
+                            #  post_id: str | None = Query(None, description="Optional. The ID of the post to view.")
+                             ):
+    filter_params = {}
+
+    if username:
+        users_posts =  post_collection.find_one({"post_author": username})
+        user_exists = user_collection.find_one({"username": username})
+        if not users_posts and user_exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"{username} has not created any posts.")
+        elif not users_posts and not user_exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail="User not found.")
+        filter_params["post_author"] = username
+    
+    # if post_id:
+    #     if not ObjectId.is_valid(post_id):
+    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+    #                             detail="Invalid post_id format. It must be a valid ObjectId.")
+    #     post = post_collection.find_one({"_id": ObjectId(post_id)})
+    #     if not post:
+    #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+    #                             detail="Post not found.")
+    #     filter_params["_id"] = str(post_id)
+
+
+    # posts = post_collection.find(filter_params)
+
+    if post_collection.count_documents(filter_params) > 0:
+        posts_result = list_serial_post(post_collection.find(filter_params))
+        
+        if filter_params:
+            return JSONResponse(content={f"Posts for the query {filter_params} ": posts_result},
+                                status_code=status.HTTP_200_OK)
+        else:
+            return JSONResponse(content={f"No filters provided. All posts were returned ": posts_result },
+                                status_code=status.HTTP_200_OK)
 
 @router.get("/{post_id}",
             summary="Read a post",
@@ -103,19 +148,22 @@ async def get_post(post_id: str = Path(description="The ObjectID of the post you
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"Post {post_id} not found.")
 
-@router.get("/{username}",
-            summary="Read all posts by a specific user",
-            include_in_schema=False,
-            description="Retrive all posts by the provided username"
-            )
-async def get_all_posts_by_user(username: str = Path(description="The username of the author whose posts you would like to get.")):
-    posts = list_serial_post(post_collection.find({"username": username}))
-    if posts: 
-        return JSONResponse(content={"message": f"Posts for user {username}", 
-                                     "posts": posts})
+# @router.get("/{username}",
+#             summary="Read all posts by a specific user",
+#             include_in_schema=False,
+#             description="Retrive all posts by the provided username"
+#             )
+# async def get_all_posts_by_user(username: str = Path(description="The username of the author whose posts you would like to get.")):
+#     if not user_collection.find_one({"username": username}):
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        
+#     posts = list_serial_post(post_collection.find({"post_author": username}))
+#     if posts: 
+#         return JSONResponse(content={"message": f"Posts for user {username}", 
+#                                      "posts": posts})
     
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                        detail="No posts found.")
+#     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+#                         detail="No posts found.")
 
 @router.put("/{post_id}",
               summary="Update a post",
@@ -190,7 +238,7 @@ async def delete_post(post_id: str = Path(description="The ObjectID of the post 
         return JSONResponse(content={"message": f"Post {post_id} removed."}, 
                             status_code=status.HTTP_200_OK)
 
-@router.post("/{post_id}/upvote",
+@router.put("/{post_id}/upvote",
              summary="Upvote a post",
              response_model_by_alias=False,
              description="Upvote a post by the post_id",
@@ -251,7 +299,7 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
         {"$inc": {"user_reputation": 1}},
     )
   
-@router.post("/{post_id}/downvote",
+@router.delete("/{post_id}/downvote",
              summary="Downvote a post",
              response_model_by_alias=False,
              description="Downvote a post by the post_id",
@@ -284,7 +332,7 @@ async def downvote_post(post_id: str = Path(description="The ID of the post to d
                                             {"_id": ObjectId(post_id)},
                                             {
                                                 "$inc": {"post_votes": -1},
-                                                "$push": {"users_who_upvoted": user}
+                                                "$push": {"users_who_downvoted": user}
                                             }
                                             )
         if result.modified_count == 1:

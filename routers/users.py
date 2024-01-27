@@ -126,13 +126,13 @@ async def update_user(username: str = Path(..., description="The username of the
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                             detail="You are not authorized to update this user.")
     
-    update_data = {k: v for k, v in user_data.model_dump(by_alias=True).items() if v}
+    update_data = {key: value for key, value in user_data.model_dump(by_alias=True).items() if value}
        
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="No valid fields to update.")
     
-    if  len(user_data) >= 1:
+    if len(update_data) >= 1:
         update_result = user_collection.find_one_and_update({"username": username}, 
                                                             {"$set": update_data},
                                                             return_document=ReturnDocument.AFTER,
@@ -147,13 +147,6 @@ async def update_user(username: str = Path(..., description="The username of the
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                                 detail=f"User {username} not found")
-
-    # existing_user = user_collection.find_one({"username": ObjectId(username)})
-    # if existing_user:
-    #     existing_user["_id"] = str(existing_user["_id"])
-    #     return existing_user
-
-    # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {username} not found")
 
 @router.delete("/{username}",
         summary="Delete a user",

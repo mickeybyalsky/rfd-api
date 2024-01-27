@@ -66,6 +66,7 @@ class PostInDB(PostBase):
     post_comments_count: int = 0
     users_who_upvoted: List[str] = []
     users_who_downvoted: List[str] = []
+    
 
 class PostUpdate(PostBase):
     post_title: Optional[str] = Field(

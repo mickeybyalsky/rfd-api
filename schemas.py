@@ -1,6 +1,3 @@
-from models import UserOut
-
-
 def individual_serial_user(user):
     user_counts =  {"user_reputation": user.get("user_reputation", 0),
         "user_post_count": user.get("user_post_count", 0),
@@ -21,6 +18,11 @@ def list_serial_user(users):
     return {str(user["username"]): individual_serial_user(user) for user in users}
 
 def individual_serial_post(post):
+    post_counts =  {"post_votes": post.get("post_votes", 0),
+        "post_views": post.get("post_views", 0),
+        "post_comments_count": post.get("post_comments_count", 0)
+    }
+
     return {
             "post_title": post.get("post_title", ""),
             "post_description": post.get("post_description", ""),
@@ -29,10 +31,11 @@ def individual_serial_post(post):
             "post_deal_expiry": post.get("post_deal_expiry", ""),
             "post_sale_price": post.get("post_sale_price", ""),
             "post_product_discount": post.get("post_product_discount", ""),
-            "post_votes": post.get("post_votes", 0),
             "post_timestamp": post.get("post_timestamp", ""),
             "post_author": post.get("post_author", ""),
-            "post_views": post.get("post_views", 0)
+            "post_counts": post_counts,
+            "users_who_upvoted": post.get("users_who_upvoted",[]),
+            "users_who_downvoted": post.get("users_who_downvoted", [])
     }
 
 def list_serial_post(posts) -> list:
@@ -40,11 +43,11 @@ def list_serial_post(posts) -> list:
 
 def individual_serial_comment(comment):
     return {
-        # "post_id": comment.get("comment_post_id", ""),
         "comment_author": comment.get("comment_author", ""),
         "comment_body": comment.get("comment_body"),
         "comment_votes": comment.get("comment_votes", None),
-        "comment_timestamp": comment.get("comment_timestamp", None)
+        "comment_timestamp": comment.get("comment_timestamp", None),
+        "comment_post_id": comment.get("comment_post_id", None)
     }
 
 def list_serial_comment(comments) -> list:

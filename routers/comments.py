@@ -1,7 +1,7 @@
 from datetime import datetime
 from auth import get_current_active_user
 from models import CommentBase, CommentInDB, UpdateComment, User
-from fastapi import APIRouter, Depends, Path, Body, HTTPException, status
+from fastapi import APIRouter, Depends, Path, Body, HTTPException, Query, status
 from database import comment_collection, post_collection, user_collection
 from schemas import list_serial_comment
 from bson import ObjectId
@@ -16,7 +16,7 @@ router = APIRouter(
             summary="Create a comment",
             description="Create a comment for the provided post_id",
             response_model_by_alias=False,
-            status_code=status.HTTP_201_CREATED
+            status_code=status.HTTP_201_CREATED,
         )
 async def create_comment(new_comment: CommentBase,
                          post_id: str = Path(description="The ObjectID of the post you would like to comment on."),
@@ -48,7 +48,8 @@ async def create_comment(new_comment: CommentBase,
         )
         user_collection.update_one({"username": current_user.username},
                                     {"$inc": {"user_comment_count": 1}})                        
-        
+        post_collection.update_one({"_id": post_id},
+                                   {"$inc": {"post_comment_count": 1}})
         created_comment['_id'] = str(created_comment['_id'])
 
         return JSONResponse(content={"message": f"Comment {created_comment['_id']} created", 
@@ -76,13 +77,13 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                        detail="Comment not found.")
 
-@router.get("/comments/",
-            summary="Read comments by post and/or user",
-            description="Retrive all comments by the provided filter(s), or returns all comments if no parameter's provided.",
-            response_model_by_alias=False,
+@router.get("/comments",
+            summary="Read comments with optional filters",
+            description="Retrieve comments with optional filters for username and/or post ID. Leave fields blank to retrive all comments."
             )
-async def get_comments_filtered(username: str = None, 
-                                post_id: str = None):
+async def get_comments_filtered(username: str | None = Query(None, description="Optional. The username to filter comments."),
+                                post_id: str | None = Query(None, description="Optional. The post ID to filter comments.")
+                                ):
     filter_params = {}
 
     if username:
@@ -102,22 +103,16 @@ async def get_comments_filtered(username: str = None,
                                 detail="Post not found.")
         filter_params["comment_post_id"] = str(post_id)
 
-    comments = comment_collection.find(filter_params)
 
-    if comments.count() > 0:
-        comments_result = list_serial_comment(comments)
+    if comment_collection.count_documents(filter_params) > 0:
+        comments_result = list_serial_comment(comment_collection.find(filter_params))
+        
         if filter_params:
             return JSONResponse(content={f"Comments for the query {filter_params} ":comments_result}, 
                             status_code=status.HTTP_200_OK)
         else:
              return JSONResponse(content={f"No filters provided. All commnents were returned ":comments_result}, 
                             status_code=status.HTTP_200_OK)
-
-    # else:
-    #     all_comments = comment_collection.find()
-    #     all_comments_result = list_serial_comment(all_comments)
-    #     return JSONResponse(content={f"No filters provided. All commnents were returned ":all_comments_result}, 
-    #                         status_code=status.HTTP_200_OK)
 
 @router.put("/comments/{comment_id}",
               summary="Update a Comment",
@@ -176,7 +171,7 @@ async def delete_comment(comment_id: str = Path(description="The ObjectID of the
                             detail="Invalid comment_id format. It must be a valid ObjectId.")
 
     existing_comment = comment_collection.find_one({"_id": ObjectId(comment_id)})
-    
+    post_id = existing_comment["_id"]
     if not existing_comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Comment {comment_id} not found.")
@@ -191,13 +186,15 @@ async def delete_comment(comment_id: str = Path(description="The ObjectID of the
         user_collection.update_one({"username": current_user.username},
                                     {"$inc": {"user_comment_count": -1}}
         )
+        post_collection.update_one({"_id": post_id},
+                                   {"$inc": {"post_comment_count": -1}})
         return JSONResponse(content={"message": f"Comment {comment_id} removed."},
                             status_code=status.HTTP_200_OK)
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"Comment {comment_id} not found.")
 
-@router.post("/comments/{comment_id}/upvote",
+@router.put("/comments/{comment_id}/upvote",
              summary="Upvote a comment",
              response_model_by_alias=False,
              description="Upvote a comment object based on the comment_id",
@@ -259,7 +256,7 @@ async def upvote_comment(comment_id: str = Path(description="The ID of the commm
         {"$inc": {"user_reputation": 1}},
     )
 
-@router.post("/comments/{comment_id}/downvote",
+@router.delete("/comments/{comment_id}/downvote",
              summary="Downvote a comment",
              response_model_by_alias=False,
              description="Downvote a comment object based on the comment_id",
@@ -291,7 +288,7 @@ async def downvote_comment(comment_id: str = Path(description="The ID of the com
                                             {"_id": ObjectId(comment_id)},
                                             {
                                                 "$inc": {"comment_votes": -1},
-                                                "$push": {"users_who_upvoted": user}
+                                                "$push": {"users_who_downvoted": user}
                                             }
                                             )
         if result.modified_count == 1:

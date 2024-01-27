@@ -77,7 +77,7 @@ You will be able to:
 app = FastAPI(
     title="RedFlagDeals REST API",
     description=description,
-    version="1.0",
+    version="1.1",
     contact={
         "name": "Mickey Byalsky",
         "url": "https://www.linkedin.com/in/mickeybyalsky/",
@@ -87,7 +87,7 @@ app = FastAPI(
 
 
 # include the router for auth
-app.include_router(auth.router, prefix="/api/v1")
+app.include_router(auth.router)
 
 # include the router for user routes
 app.include_router(users.router, prefix="/api/v1")
