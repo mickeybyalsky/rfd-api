@@ -25,30 +25,32 @@ Have some fun by creating a user, then creating a post or reading some posts, an
 <br>
 <br>
 Made with Python, FastAPI and MongoDB. Hosted on AWS EC2
-## 👫 Users 👫
+
+## Users 
 
 You will be able to:
 
-* Create/Register a user
-* Read all users
-* Read your user
-* Read a user
-* Update a users
-* Delete a user
+* [Create/Register a user](#/default/create_user_api_v1_users_register_post)
+* [Read all users](#/Users/get_all_users_api_v1_users__get)
+* [Read your user](#/Users/get_user_api_v1_users_me_get)
+* [Read a user](#/Users/get_user_api_v1_users__username__get)
+* [Update a users](#/Users/update_user_api_v1_users__username__put)
+* [Delete a user](#/Users/delete_user_api_v1_users__username__delete)
 
-## 🛒 Posts 🛒
+## Posts
 
 You will be able to:
 
-* Create a post
-* Read all posts
-* Read a post
-* Update a post
-* Delete a post
-* Upvote a post
-* Downvote a post
+* [Read all posts]
+* [Create a post]
+* [Read posts with optional filters]
+* [Read a post]
+* [Update a post]
+* [Delete a post]
+* [Upvote a post]
+* [Downvote a post]
 
-## 💬 Comments 💬
+## Comments
 
 You will be able to:
 
@@ -60,13 +62,13 @@ You will be able to:
 * Upvote a comment
 * Downvote a comment
 
-## 🔍 Misc 🔍
+## Misc
 
 You will be able to: 
 
 * Read API statistics
 
-## 🛠️ Roadmap 🛠️
+## Roadmap
 
 * Administrator/Moderator functions (Delete posts/comments of other users and ban/temporarily disabling users)
 * Enumerate merchants when creating or searching for posts for a more cohesive experience
