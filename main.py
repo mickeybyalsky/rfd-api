@@ -1,7 +1,7 @@
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 import routers.users as users, routers.posts as posts, routers.comments as comments, auth
-from database import comment_collection, post_collection, user_collection
+from database import db
 
 
 description = """
@@ -87,7 +87,6 @@ app = FastAPI(
     }
 )
 
-
 # include the router for auth
 app.include_router(auth.router)
 
@@ -111,9 +110,9 @@ async def get_metrics():
     metrics = {}
 
     metrics["document_counts"] = {
-        "user_count" : user_collection.count_documents({}),
-        "post_count" : post_collection.count_documents({}),
-        "comment_count" : comment_collection.count_documents({})
+        "user_count" : db["users"].count_documents({}),
+        "post_count" : db["posts"].count_documents({}),
+        "comment_count" : db["comments"].count_documents({})
     }
 
     pipeline = [
@@ -127,7 +126,7 @@ async def get_metrics():
         }
     ]   
 
-    temp = list(post_collection.aggregate(pipeline))
+    temp = list(db["posts"].aggregate(pipeline))
     
     metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
 

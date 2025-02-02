@@ -4,10 +4,11 @@ from typing import Annotated
 from models import *
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+# from jose import JWTError
+import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from database import user_collection
+from database import db
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 ALGORITHM = os.environ.get('ALGORITHM')
@@ -47,27 +48,22 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 def get_user(username: str):
-    user = user_collection.find_one({"username": username})
+    user = db["users"].find_one({"username": username})
     if user is not None:
-        return UserInDB(**user) 
+        return user
     
 def authenticate_user(username: str, password: str):
     user = get_user(username)
-    if user is None:
-        return None
-    if not verify_password(password, user.hashed_password):
-        return None
+    if user is None or not verify_password(password, user['hashed_password']):
+        return None  # Return None if user is not found or password is incorrect
     return user
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:  
-        expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
@@ -81,7 +77,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
     user = get_user(username=token_data.username)
     if user is None: 
@@ -89,8 +85,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     return user
 
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
+    # if current_user.disabled:
+    #     raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 @router.post("/token", response_model=Token)
@@ -105,7 +101,7 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user["username"]}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
