@@ -1,17 +1,11 @@
-from bson import ObjectId
-from pydantic import BaseModel, ConfigDict
-import datetime
+from pydantic import BaseModel
 from typing import Optional, List
-# import uuid
-from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
-from typing_extensions import Annotated
-from datetime import datetime
-# from pytz import timezone
+from pydantic import BaseModel, EmailStr, Field
 
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=30, description="Unique username")
     password: str = Field(..., min_length=6, max_length=100, description="User password")
-    user_email: Optional[EmailStr] = None  # Using Pydantic EmailStr for validation
+    user_email: EmailStr  # Using Pydantic EmailStr for validation
     user_full_name: Optional[str] = None
     user_location: Optional[str] = None
 

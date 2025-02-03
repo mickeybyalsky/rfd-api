@@ -1,10 +1,6 @@
-import datetime
 from typing import Optional, List
-import uuid
-from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator
 from typing_extensions import Annotated
-from datetime import datetime
-# from pytz import timezone
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 

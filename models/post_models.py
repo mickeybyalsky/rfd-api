@@ -1,9 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, BeforeValidator
 from typing_extensions import Annotated
-from datetime import datetime
 from typing import List
-# from pytz import timezone
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 # class PostBase(BaseModel):

@@ -1,8 +1,13 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
+from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
-import routers.users as users, routers.posts as posts, routers.comments as comments, auth
+import routers.users as users
+import routers.posts as posts
+import routers.comments as comments
+import routers.admin as admin
+import auth
 from database import db
-
+from fastapi.middleware.cors import CORSMiddleware
 
 description = """
 A recreation to the RedFlagDeals experience, made for fun and to explore the world of REST API's.
@@ -87,6 +92,16 @@ app = FastAPI(
     }
 )
 
+templates = Jinja2Templates(directory="templates")
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://127.0.0.1:8080"],
+#     allow_credentials=True,
+#     allow_methods=["*"],  # Allows GET, POST, PUT, DELETE, etc.
+#     allow_headers=["*"],
+# )
+
 # include the router for auth
 app.include_router(auth.router)
 
@@ -99,9 +114,13 @@ app.include_router(posts.router, prefix="/api/v1")
 # include the router for comment routes
 app.include_router(comments.router, prefix="/api/v1")
 
+app.include_router(admin.router, prefix="/api/v1")
+
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 
 @app.get("/stats",
          summary="Read API statistics",
@@ -110,9 +129,9 @@ async def get_metrics():
     metrics = {}
 
     metrics["document_counts"] = {
-        "user_count" : db["users"].count_documents({}),
-        "post_count" : db["posts"].count_documents({}),
-        "comment_count" : db["comments"].count_documents({})
+        "user_count": db["users"].count_documents({}),
+        "post_count": db["posts"].count_documents({}),
+        "comment_count": db["comments"].count_documents({})
     }
 
     pipeline = [
@@ -124,15 +143,15 @@ async def get_metrics():
                 "total_post_downvotes": {"$sum": {"$size": {"$ifNull": ["$users_who_downvoted", []]}}}
             }
         }
-    ]   
+    ]
 
     temp = list(db["posts"].aggregate(pipeline))
-    
+
     metrics["total_view_count_of_posts"] = temp[0]["total_post_views"] if temp else 0
 
     metrics["vote_counts"] = {
         "total_post_upvotes_count": temp[0]["total_post_upvotes"] if temp else 0,
         "total_post_downvotes_count": temp[0]["total_post_downvotes"] if temp else 0,
     }
-    
+
     return JSONResponse(content={"metrics": metrics}, status_code=status.HTTP_200_OK)
