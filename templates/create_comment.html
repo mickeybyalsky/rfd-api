@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Create Comment{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h2>Create a Comment</h2>
+
+        <form method="post" action="{{ url_for('create_comment_no_auth', post_id=post_id) }}">
+            <!-- Comment Textarea -->
+            <div class="mb-3">
+                <label for="new_comment" class="form-label">Your Comment for {{ post_title }}</label>
+                <textarea class="form-control" id="new_comment" name="new_comment" rows="3" required></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary">Submit Comment</button>
+        </form>
+    </div>
+{% endblock %}

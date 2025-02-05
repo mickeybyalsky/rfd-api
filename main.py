@@ -1,6 +1,6 @@
 from fastapi import FastAPI, status, Request
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 import routers.users as users
 import routers.posts as posts
 import routers.comments as comments
@@ -118,8 +118,8 @@ app.include_router(admin.router, prefix="/api/v1")
 
 
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+async def read_root(request: Request):
+    return RedirectResponse(url="/api/v1/posts/home")
 
 
 @app.get("/stats",

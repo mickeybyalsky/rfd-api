@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}All Posts{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2>All Posts</h2>
+        <a href="{{ url_for('render_post_form') }}" class="btn btn-primary">
+            Add a Post
+        </a>
+    </div>    
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Price</th>
+                <th>Retailer</th>
+                <th>Views</th>
+                <th>Votes</th>
+                <th>Comments</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+                <tr>
+                    <td><a href="{{ url_for('get_post', post_id=post.id) }}">{{ post.post_title }}</a></td>
+                    <td>${{ post.post_sale_price }}</td>
+                    <td>{{ post.post_retailer }}</td>
+                    <td>{{ post.post_views }}</td>
+                    <td>{{ post.post_votes }}</td>
+                    <td>{{ post.post_comment_count | default(0) }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">No posts available.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="mt-4">
+        <a href="{{ url_for('render_post_form') }}" class="btn btn-primary">
+            Add a Post
+        </a>
+    </div>
+{% endblock %}

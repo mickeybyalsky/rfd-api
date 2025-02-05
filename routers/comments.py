@@ -1,21 +1,86 @@
 from datetime import datetime
 from auth import get_current_active_user
 from models import CreateCommentRequest, CommentInDB, UpdateComment, User
-from fastapi import APIRouter, Depends, Path, Body, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Form, Path, Body, HTTPException, Query, Request, status
 from bson import ObjectId
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pymongo.collection import ReturnDocument
 from database import db
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter(
     tags=['Comments'],
 )
+
+templates = Jinja2Templates(directory="./templates")
 
 
 def id_to_string(comment):
     comment["id"] = str(comment["_id"])
     del comment["_id"]
     return comment
+
+
+@router.post("/{post_id}/comments_no_auth",
+             summary="Create a comment without authentication",
+             description="Create a comment for the provided post_id",
+             response_model_by_alias=False,
+             status_code=status.HTTP_201_CREATED,
+             responses={404: {
+                 "description": "Post does not exist. Comment must be created for an existing post."}, 400: {"description": "Invalid post_id format. It must be a valid ID."}, 500: {"description": "Comment not created."}}
+             )
+async def create_comment_no_auth(new_comment: str = Form(...),
+                                 post_id: str = Path(
+    description="The ID of the post you would like to comment on."),
+):
+    # Check if it is a valid ID
+    if ObjectId.is_valid(post_id):
+        # find the post in the database
+        post = db["posts"].find_one({"_id": ObjectId(post_id)})
+
+        # if post does not exist
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                # return an exception
+                                detail="Post does not exist. Comment must be created for an existing post.")
+
+    # Not a valid ID
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid post_id format. It must be a valid ID.")  # return an exception
+
+    # Cast comment to CommentInDB model
+    new_comment = CommentInDB(
+        comment_body=new_comment,
+        comment_post_id=post_id,
+        comment_author="Anonymous",
+        comment_votes=0,
+        comment_timestamp=str(datetime.now()),
+        users_who_upvoted=[],
+        users_who_downvoted=[]
+    )
+
+    # Insert the comment into the database
+    comment_result = db["comments"].insert_one(new_comment.model_dump())
+
+    # If the comment was successfully inserted
+    if comment_result.acknowledged:
+        created_comment = db["comments"].find_one(
+            {"_id": comment_result.inserted_id}
+        )
+
+        # Increment the comment count for the post
+        db["posts"].update_one({"_id": ObjectId(post_id)},
+                               {"$inc": {"post_comment_count": 1}})
+
+        # Convert the ObjectId to a string
+        created_comment['_id'] = str(created_comment['_id'])
+
+        # Return the comment
+        return RedirectResponse(url=f"/api/v1/posts/{post_id}", status_code=303)
+
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Comment not created")  # return an exception
 
 
 @router.post("/{post_id}/comments",
@@ -90,6 +155,12 @@ async def create_comment(new_comment: CreateCommentRequest,
                         detail="Comment not created")  # return an exception
 
 
+@router.get("/{post_id}/add_comment", summary="Render comment form")
+async def render_comment_form(request: Request, post_id: str):
+    post_title = db["posts"].find_one({"_id": ObjectId(post_id)})["post_title"]
+    return templates.TemplateResponse("create_comment.html", {"request": request, "post_id": post_id, "post_title": post_title})
+
+
 @router.get("/comments/{comment_id}",
             summary="Read a comment",
             description="Retrive a comment object by the comment_id.",
@@ -116,16 +187,43 @@ async def get_comment(comment_id: str = Path(description="The ID of the commment
                             status_code=status.HTTP_200_OK)  # return the comment
 
 
+@router.get("/posts/{post_id}/comments",
+            summary="Read comments for a post",
+            description="Retrieve comments for a post by the post_id.",
+            response_model_by_alias=False,
+            responses={404: {"description": "No comments found."}, 400: {
+                "description": "Invalid post_id format. It must be a valid ID."}, 200: {"description": "Comments found."}}
+            )
+async def get_post_comments(post_id: str):
+    # check if it is a valid ID
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid post_id format. It must be a valid ID")  # return an exception
+    # find the post in the database
+    post = db["posts"].find_one({"_id": ObjectId(post_id)})
+
+    # if the post does not exist, return an exception
+    if not post:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                             detail="Post not found.")
+
+    # find the comments for the post
+    comments = db["comments"].find({"comment_post_id": post_id})
+    
+    # convert the ObjectId to a string for each comment
+    comments = [id_to_string(comment) for comment in comments]
+    
+    return JSONResponse(content=comments,
+                        status_code=status.HTTP_200_OK)  # return the comments
+
+
 @router.get("/comments",
             summary="Read comments with optional filters",
             description="Retrieve comments with optional filters for username and/or post ID. Leave fields blank to retrive all comments.",
             responses={200: {"description": "Comments found."}, 404: {"description": "No comments found."}, 400: {
                 "description": "Invalid post_id format. It must be a valid ID."}}
             )
-async def get_comments_filtered(username: str | None = Query(None, description="Optional. The username to filter comments."),
-                                post_id: str | None = Query(
-                                    None, description="Optional. The post ID to filter comments.")
-                                ):
+async def get_comments_filtered(username: str | None = Query(None, description="Optional. The username to filter comments.")):
     filter_params = {}  # create an empty dictionary for the filter parameters
 
     # if username is provided
@@ -140,24 +238,6 @@ async def get_comments_filtered(username: str | None = Query(None, description="
 
         # set the username to be a filter parameter
         filter_params["comment_author"] = username
-
-    # if post_id is provided
-    if post_id:
-        # check if it is a valid ID
-        if not ObjectId.is_valid(post_id):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Invalid post_id format. It must be a valid ID.")  # return an exception
-
-        # check if the post exists
-        post = db["posts"].find_one({"_id": ObjectId(post_id)})
-
-        # if the post does not exist, raise an exception
-        if not post:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Post not found.")
-
-        # set the post_id to be a filter parameter
-        filter_params["comment_post_id"] = str(post_id)
 
     # if there are comments that match the filter parameters
     if db["comments"].count_documents(filter_params) > 0:
@@ -436,3 +516,83 @@ async def downvote_comment(comment_id: str = Path(description="The ID of the com
         {"username": existing_comment["comment_author"]},
         {"$inc": {"user_reputation": -1}},
     )
+
+
+@router.post("/comments/{comment_id}/upvote_no_auth",
+             summary="Upvote a comment without auth",
+             response_model_by_alias=False,
+             description="Upvote a comment object based on the comment_id without auth",
+             status_code=status.HTTP_200_OK,
+             responses={404: {"description": "Comment not found."}, 400: {
+                 "description": "Invalid comment_id format. It must be a valid ID."}, 200: {"description": "Comment upvoted."}}
+             )
+async def upvote_comment_no_auth(comment_id: str = Path(description="The ID of the commment to upvote")):
+
+    # check if it is a valid ID
+    if not ObjectId.is_valid(comment_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid comment_id format. It must be a valid ID")
+
+    # find the comment in the database
+    existing_comment = db["comments"].find_one({"_id": ObjectId(comment_id)})
+
+    # if the comment does not exist, raise an exception
+    if not existing_comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Comment not found.")
+   
+    result = db["comments"].update_one(
+        {"_id": ObjectId(comment_id)},
+        {
+            "$inc": {"comment_votes": 1}
+        }
+    )
+    # increment the comment_author's reputation
+    db["users"].update_one(
+        {"username": existing_comment["comment_author"]},
+        {"$inc": {"user_reputation": 1}},
+    )
+
+    # if the comment was successfully upvoted, return a success message
+    if result.modified_count == 1:
+        return JSONResponse(content={"message": f"Comment upvoted."},
+                            status_code=status.HTTP_200_OK)
+    
+@router.post("/comments/{comment_id}/downvote_no_auth",
+             summary="Downvote a comment without auth",
+             response_model_by_alias=False,
+             description="Downvote a comment object based on the comment_id without auth",
+             status_code=status.HTTP_200_OK,
+             responses={404: {"description": "Comment not found."}, 400: {
+                 "description": "Invalid comment_id format. It must be a valid ID."}, 200: {"description": "Comment upvoted."}}
+             )
+async def downvote_comment_no_auth(comment_id: str = Path(description="The ID of the commment to upvote")):
+    # check if it is a valid ID
+    if not ObjectId.is_valid(comment_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid comment_id format. It must be a valid ID")
+
+    # find the comment in the database
+    existing_comment = db["comments"].find_one({"_id": ObjectId(comment_id)})
+
+    # if the comment does not exist, raise an exception
+    if not existing_comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Comment not found.")
+   
+    result = db["comments"].update_one(
+        {"_id": ObjectId(comment_id)},
+        {
+            "$inc": {"comment_votes": -1}
+        }
+    )
+    # increment the comment_author's reputation
+    db["users"].update_one(
+        {"username": existing_comment["comment_author"]},
+        {"$inc": {"user_reputation": -1}},
+    )
+
+    # if the comment was successfully upvoted, return a success message
+    if result.modified_count == 1:
+        return JSONResponse(content={"message": f"Comment downvoted."},
+                            status_code=status.HTTP_200_OK)

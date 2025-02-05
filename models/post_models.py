@@ -20,7 +20,7 @@ class CreatePostRequest(BaseModel):
     post_product_category:  Optional[str] = None
     post_link_to_deal:  Optional[str] = None 
     post_deal_expiry:  Optional[str] = None 
-    post_sale_price:  Optional[int] = None 
+    post_sale_price:  Optional[float] = None 
     post_retailer:  Optional[str] = None
 
 class PostInDB(BaseModel):
@@ -29,7 +29,7 @@ class PostInDB(BaseModel):
     post_product_category:  Optional[str] = None
     post_link_to_deal:  Optional[str] = None 
     post_deal_expiry:  Optional[str] = None 
-    post_sale_price:  Optional[int] = None 
+    post_sale_price:  Optional[float] = None 
     post_retailer:  Optional[str] = None
     post_votes: int = 0  # Initial vote count
     post_timestamp: str| None = None

@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, Body, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Body, Query, Request, status, Form
 from auth import get_current_active_user
 from models import PostInDB, PostUpdate, User, CreatePostRequest
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from bson import ObjectId
 from pymongo.collection import ReturnDocument
 from datetime import datetime
 from database import db
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter(
     prefix='/posts',
@@ -14,6 +15,7 @@ router = APIRouter(
 
 # _id is a ObjectId type and we need JSON
 
+templates = Jinja2Templates(directory="./templates")
 
 def id_to_string(post):
     post["id"] = str(post["_id"])
@@ -81,6 +83,53 @@ async def create_post(post: CreatePostRequest,
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Post not created")
 
+@router.post("/add_post_no_auth",
+             summary="Create a post without authentication",
+             status_code=status.HTTP_201_CREATED,
+             description="Create a new deal thread.",
+             responses={500: {"description": "Post not created"}, 200: {"description": "Post created"}}
+             )
+async def create_post_no_auth(post_title: str = Form(...), post_description: str = Form(...), post_product_category: str = Form(...), post_link_to_deal: str = Form(...), post_deal_expiry: str = Form(...), post_sale_price: float = Form(...), post_retailer: str = Form(...)):   
+
+    # Convert CreatePostRequest to PostInDB
+    new_post = PostInDB(
+        post_title=post_title,
+        post_description=post_description,
+        post_product_category=post_product_category,
+        post_link_to_deal=post_link_to_deal,
+        post_deal_expiry=post_deal_expiry,
+        post_sale_price=post_sale_price,
+        post_retailer=post_retailer,
+        post_votes=0,
+        post_timestamp=str(datetime.now()),
+        post_author="Anonymous",
+        post_views=0,
+        users_who_downvoted=[],
+        users_who_upvoted=[],
+        post_comments_count=0,
+        bought_count=0
+    )
+
+    # insert the new post into the database
+    post_result = db["posts"].insert_one(new_post.model_dump())
+
+    # if the post was successfully created, return the post data
+    if post_result.acknowledged:
+        created_post = db["posts"].find_one(
+            {"_id": post_result.inserted_id})  # get the post data
+        # convert the _id to a string
+        created_post['_id'] = str(created_post['_id'])
+
+        # return the post data
+        return RedirectResponse(url=f"/api/v1/posts/{created_post['_id']}", status_code=303)
+
+    # if the post was not created, raise an exception
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Post not created")
+
+@router.get("/add_post", summary="Render post form")
+async def render_post_form(request: Request):
+    return templates.TemplateResponse("create_post.html", {"request": request})
 
 @router.get("/",
             summary="Read all posts",
@@ -88,25 +137,43 @@ async def create_post(post: CreatePostRequest,
             description="Retrive all posts.",
             responses={404: {"description": "Users or Posts not found"}}
             )
-async def get_all_posts():
+async def get_all_posts(request: Request):
     posts = list(db['posts'].find())  # get all posts
 
     # if there are posts, return the posts
     if posts:
         # convert each post's _id to a string
         output = [id_to_string(post) for post in posts]
-        return JSONResponse(content={"posts": output})
+        return templates.TemplateResponse("posts.html", {"request": request, "name": "RedFlagDeals REST API", "posts": posts})
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="No posts found.")  # if there are no posts, raise an exception
+
+@router.get("/home",
+            summary="Read all posts",
+            response_model_by_alias=False,
+            description="Retrive all posts.",
+            responses={404: {"description": "Users or Posts not found"}}
+            )
+async def posts_home(request: Request):
+    posts = list(db['posts'].find())  # get all posts
+    # if there are posts, return the posts
+    if posts:
+        # convert each post's _id to a string
+        output = [id_to_string(post) for post in posts]
+        return templates.TemplateResponse("home.html", {"request": request, "name": "RedFlagDeals REST API", "posts": posts})
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="No posts found.")  # if there are no posts, raise an exception
 
 
-@router.get("",
+@router.get("/search",
             summary="Read posts with filters",
             description="Retrieve posts with filter for post author.",
             responses={404: {"description": "Users or Posts not found"}}
             )
-async def get_posts_filtered(username: str = Query(None, description="Optional. The post author to filter posts"),
+async def get_posts_filtered(request: Request,
+                             username: str = Query(None, description="Optional. The post author to filter posts"),
                              retailer: str = Query(
                                  None, description="Optional. The retailer to filter posts"),
                              category: str = Query(
@@ -144,9 +211,7 @@ async def get_posts_filtered(username: str = Query(None, description="Optional. 
     output = [id_to_string(post) for post in posts_result]
 
     # return the posts
-    return JSONResponse(content={"Posts for the query": output},
-                        status_code=status.HTTP_200_OK)
-
+    return templates.TemplateResponse("filtered_posts.html", {"request": request, "post": output})
 
 @router.get("/{post_id}",
             summary="Read a post",
@@ -154,7 +219,8 @@ async def get_posts_filtered(username: str = Query(None, description="Optional. 
             description="Retrive a post by the post_id",
             response_model=PostInDB,
             responses={404: {"description": "Post not found"}, 400: {"description": "Invalid post_id format"}})
-async def get_post(post_id: str = Path(title="RS", description="The ID of the post you would like to view"), examples=["60f1b9b3b3b3b3b3b3b3b3b", "60f1b9b3b3b3b3b3b3b3b3b"]):
+async def get_post(request: Request, post_id: str = Path(title="RS", description="The ID of the post you would like to view"), examples=["60f1b9b3b3b3b3b3b3b3b3b", "60f1b9b3b3b3b3b3b3b3b3b"]):
+    
     # check if the post_id is a valid ObjectId
     if not ObjectId.is_valid(post_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -179,8 +245,9 @@ async def get_post(post_id: str = Path(title="RS", description="The ID of the po
 
     # if there is response data, return the response data
     if response_data:
-        return JSONResponse(content={post_id: response_data},
-                            status_code=status.HTTP_200_OK)
+        return templates.TemplateResponse("post_detail.html", {"request": request, "post": post, "comment_length": db["comments"].count_documents({"comment_post_id": post_id}),"comments": comments})
+        # return JSONResponse(content={post_id: response_data},
+        #                     status_code=status.HTTP_200_OK)
 
     # if there is no response data, raise an exception
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -357,6 +424,47 @@ async def upvote_post(post_id: str = Path(description="The ID of the post to upv
         {"$inc": {"user_reputation": 1}},
     )
 
+@router.post("/{post_id}/upvote_no_auth",
+             summary="Upvote a post without auth",
+             response_model_by_alias=False,
+             description="Upvote a post by the post_id without auth",
+             status_code=status.HTTP_200_OK,
+             responses={404: {"description": "Post not found"}, 400: {
+                 "description": "Invalid post_id format or Cannot vote on your own post"}}
+             )
+async def upvote_post_no_auth(post_id: str = Path(description="The ID of the post to upvote")):
+    # check if the post_id is a valid ObjectId
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid post_id format. It must be a valid ID")
+
+    # find the post by the post_id
+    existing_post = db["posts"].find_one({"_id": ObjectId(post_id)})
+
+    # if the post does not exist, raise an exception
+    if not existing_post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Post not found.")
+
+    result = db["posts"].update_one(
+        {"_id": ObjectId(post_id)},
+        {
+            "$inc": {"post_votes": 1},
+        }
+    )# add 1 to the post_votes
+    
+    # increment the post's author reputation by 1
+    db["users"].update_one(
+        {"username": existing_post["post_author"]},
+        {"$inc": {"user_reputation": 1}},
+    )
+    
+    # Return message if upvote was successful
+    if result.modified_count == 1:
+        return JSONResponse(content={"message": f"Post upvoted."},
+                            status_code=status.HTTP_200_OK)
+    
+
 @router.post("/{post_id}/downvote",
              summary="Downvote a post",
              response_model_by_alias=False,
@@ -428,3 +536,44 @@ async def downvote_post(post_id: str = Path(description="The ID of the post to d
         {"username": existing_post["post_author"]},
         {"$inc": {"user_reputation": -1}},
     )
+
+@router.post("/{post_id}/downvote_no_auth",
+             summary="Downvote a post without auth",
+             response_model_by_alias=False,
+             description="Downvote a post by the post_id without auth",
+             status_code=status.HTTP_200_OK,
+             responses={404: {"description": "Post not found"}, 400: {
+                 "description": "Invalid post_id format or Cannot vote on your own post"}}
+             )
+async def downvote_post_no_auth(post_id: str = Path(description="The ID of the post to downvote")):
+    # check if the post_id is a valid ObjectId
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid post_id format. It must be a valid ID")
+
+    # find the post by the post_id
+    existing_post = db["posts"].find_one({"_id": ObjectId(post_id)})
+
+    # if the post does not exist, raise an exception
+    if not existing_post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Post not found.")
+
+    result = db["posts"].update_one(
+        {"_id": ObjectId(post_id)},
+        {
+            "$inc": {"post_votes": -1},
+        }
+    )# subtract 1 from the post_votes
+    
+    # increment the post's author reputation by 1
+    db["users"].update_one(
+        {"username": existing_post["post_author"]},
+        {"$inc": {"user_reputation": -1}},
+    )
+    
+    # Return message if upvote was successful
+    if result.modified_count == 1:
+        return JSONResponse(content={"message": f"Post upvoted."},
+                            status_code=status.HTTP_200_OK)
+    

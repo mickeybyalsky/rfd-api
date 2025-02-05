@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}All Posts{% endblock %}
+
+{% block content %}
+        <h2>{{ user.username }}</h2>
+        <table class="table table-striped">
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Full Name</th>
+                <th>Location</th>
+            </tr>
+            <tr>
+                <td>{{ user["username"] }}</td>
+                <td>{{ user["user_email"] }}</td>
+                <td>{{ user["user_full_name"] }}</td>
+                <td>{{ user["user_location"] }}</td>
+            </tr>
+            <tr>
+                <th>User Score:</th>
+                <th>Posts Written:</th>
+                <th>Comments Written:</th>
+                <th>Total Spent:</th>
+            </tr>
+            <tr>
+                <td>{{ user["user_reputation"] }}</td>
+                <td>{{ user["user_post_count"] }}</td>
+                <td>{{ user["user_comment_count"] }}</td>
+                <td>{{ user["user_spent_total"] }}</td>
+            </tr>
+        </table>
+        {% endblock %}

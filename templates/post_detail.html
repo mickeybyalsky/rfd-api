@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}All Posts{% endblock %}
+
+{% block content %}
+<script>
+    function upvotePost(postId) {
+        fetch(`/api/v1/posts/${postId}/upvote_no_auth`, { 
+            method: "POST" 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message); // Show success message
+                location.reload();   // Refresh page to update vote count
+            } else {
+                alert("Something went wrong!"); // Handle errors
+            }
+        })
+        .catch(error => {
+            alert("Error: " + error);
+        });
+    }
+
+    function downvotePost(postId) {
+        fetch(`/api/v1/posts/${postId}/downvote_no_auth`, { 
+            method: "POST" 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message); // Show success message
+                location.reload();   // Refresh page to update vote count
+            } else {
+                alert("Something went wrong!"); // Handle errors
+            }
+        })
+        .catch(error => {
+            alert("Error: " + error);
+        });
+    }
+    function upvoteComment(commentId) {
+        fetch(`/api/v1/comments/${commentId}/upvote_no_auth`, { 
+            method: "POST" 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message); // Show success message
+                location.reload();   // Refresh page to update vote count
+            } else {
+                alert("Something went wrong!"); // Handle errors
+            }
+        })
+        .catch(error => {
+            alert("Error: " + error);
+        });
+    }
+
+    function downvoteComment(commentId) {
+        fetch(`/api/v1/comments/${commentId}/downvote_no_auth`, { 
+            method: "POST" 
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message); // Show success message
+                location.reload();   // Refresh page to update vote count
+            } else {
+                alert("Something went wrong!"); // Handle errors
+            }
+        })
+        .catch(error => {
+            alert("Error: " + error);
+        });
+    }
+</script>
+
+    <h2>{{ post["post_title"] }}</h2>
+    <table class="table table-striped">
+        <tr>
+            <th>Description</th>
+            <th>Retailer</th>
+            <th>Price</th>
+            <th>Votes</th>
+        </tr>
+        <tr>
+            <td>{{ post["post_description"] }}</td>
+            <td>{{ post["post_retailer"] }}</td>
+            <td>${{ post["post_sale_price"] }}</td>
+            <td>{{ post["post_votes"] }}</td>
+        </tr>
+        <tr>
+            <th>Category</th>
+            <th>Link</th>
+            <th>Author</th>
+            <th>Bought Count</th>
+        </tr>
+        <tr>
+            <td>{{ post["post_product_category"] }}</td>
+            <td>
+                <a href="{{ post.post_link_to_deal }}" target="_blank">Link To Deal</a>
+            </td>
+            <td>
+                {% if post["post_author"] == "Anonymous" %}
+                {{ post["post_author"] }}
+                {% else %}
+                <a href="{{ url_for('get_user', username=post['post_author']) }}">
+                    {{ post["post_author"] }}
+                </a>
+                {% endif %}
+            </td>
+            <td>{{ post["bought_count"] }}</td>
+        </tr>
+    </table>
+
+    
+    <!-- Create Comment Button -->
+    <div class="mt-4">
+        <a href="{{ url_for('render_comment_form', post_id=post['id']) }}" class="btn btn-primary">
+            Add a Comment
+        </a>
+    </div>
+
+    <div class="mt-4">
+        <a href="#" class="btn btn-outline-secondary" onclick="upvotePost('{{ post.id }}')">Upvote Post 👍</a>
+        <a href="#" class="btn btn-outline-secondary" onclick="downvotePost('{{ post.id }}')">Downvote Post 👎</a>
+    </div>
+
+    <h3 class="mt-5">{{ post["post_comment_count"] }} Comments</h3>
+    {% if comments %}
+        <div class="comments">
+            {% for comment in comments %}
+                <div class="comment mt-4 p-3 border rounded">
+                    <div class="comment-header">
+                        {% if comment.comment_author == "Anonymous" %}
+                            <strong>{{ comment.comment_author }}</strong> 
+                        {% else %}
+                            <a href="{{ url_for('render_comment_form', post_id=post['id']) }}">
+                                <strong>{{ comment.comment_author }}</strong> 
+                            </a>
+                        {% endif %}
+                        <span class="text-muted">({{ comment.comment_timestamp }})</span>
+                    </div>
+                    <div class="comment-body">
+                        <p>{{ comment.comment_body }}</p>
+                    </div>
+                    <div class="comment-footer">
+                        <span><strong>Votes:</strong> {{ comment.comment_votes }}</span>
+                    </div>
+                    <div class="mt-4">
+                        <a href="#" class="btn btn-outline-secondary" onclick="upvoteComment('{{ comment.id }}')"> 👍</a>
+                        <a href="#" class="btn btn-outline-secondary" onclick="downvoteComment('{{ comment.id }}')">👎</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No comments yet. Be the first to share your thoughts!</p>
+    {% endif %}
+    <div class="mt-4">
+        <a href="{{ url_for('render_comment_form', post_id=post['id']) }}" class="btn btn-primary">
+            Add a Comment
+        </a>
+    </div>
+{% endblock %}

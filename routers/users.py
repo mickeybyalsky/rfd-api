@@ -1,5 +1,6 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Body, Request, status
+from fastapi.templating import Jinja2Templates
 from auth import get_current_active_user, get_password_hash
 from models.user_models import CreateUserRequest, User, UserOut, UserUpdate
 from bson import ObjectId
@@ -11,6 +12,8 @@ router = APIRouter(
     prefix='/users',
     tags=['Users'],
 )
+
+templates = Jinja2Templates(directory="./templates")
 
 def id_to_string(user):
     user["id"] = str(user["_id"])
@@ -75,7 +78,7 @@ async def create_user(user: CreateUserRequest):
             description="Retrive all users.",
             responses={404: {"description": "No Users found."}}
             )
-async def get_all_users():
+async def get_all_users(request: Request):
     # Get all users from the database, do not include the hashed password
     users = list(db["users"].find(projection={"hashed_password": 0}))
 
@@ -83,7 +86,7 @@ async def get_all_users():
     if users:
         # Convert all ObjectId to string
         output = [id_to_string(user) for user in users]
-        return output
+        return templates.TemplateResponse("users.html", {"request": request, "name": "RedFlagDeals REST API", "users": output})
     else:
         # If no users found, raise an error
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -97,7 +100,10 @@ async def get_all_users():
             responses={403: {"description": "You are not authorized."},
                        404: {"description": "User not found."}}
             )
-async def get_user(current_user: User = Depends(get_current_active_user)):
+async def get_current_user(current_user: User = Depends(get_current_active_user)):
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized access.")
+
     # Get the logged in user from the database, exclude the hashed password
     existing_user = db["users"].find_one({"username": current_user["username"]},
                                          projection={"hashed_password": 0})
@@ -105,8 +111,8 @@ async def get_user(current_user: User = Depends(get_current_active_user)):
     # If user exists return data, If user not found, raise an error
     if existing_user:
         user = id_to_string(existing_user)  # Convert ObjectId to string
-        return JSONResponse(content=dict(user),
-                            status_code=status.HTTP_200_OK)  # Return the user
+        return JSONResponse(content={current_user["username"]: dict(user)},
+                                status_code=status.HTTP_200_OK)  # Return the updated user
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             # raise an error
@@ -119,16 +125,15 @@ async def get_user(current_user: User = Depends(get_current_active_user)):
             description="Retrive a user by the username",
             responses={404: {"description": "User not found."}}
             )
-async def get_user(username: str = Path(description="The username of the user you want to view")):
+async def get_user(request: Request, username: str = Path(description="The username of the user you want to view")):
     # Get the user by the username, exclude the hashed password
     user_in_db = db["users"].find_one({"username": username},
                                       projection={"hashed_password": 0})
     # If user not found, raise an error
     if user_in_db:
         user = id_to_string(user_in_db)  # convert ObjectId to string
-        return JSONResponse(content={username: dict(user)},
-                            status_code=status.HTTP_200_OK)
-
+        return templates.TemplateResponse("user_detail.html", {"request": request, "user": user})
+        
     # If user not found, raise an error
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"User '{username}' not found.")

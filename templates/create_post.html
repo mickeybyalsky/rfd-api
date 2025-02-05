@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Create Post{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h2>Create a Post</h2>
+
+        <form method="post" action="{{ url_for('create_post_no_auth') }}">
+            <div class="mb-3">
+                <label for="post_title" class="form-label">Deal Title</label>
+                <input class="form-control" id="post_title" name="post_title" required></input>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_description" class="form-label">Deal Description</label>
+                <textarea class="form-control" id="post_description" name="post_description" rows="3" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_product_category" class="form-label">Deal Category</label>
+                <textarea class="form-control" id="post_product_category" name="post_product_category"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_link_to_deal" class="form-label">Deal Link</label>
+                <textarea class="form-control" id="post_link_to_deal" name="post_link_to_deal"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_deal_expiry" class="form-label">Deal Expiry</label>
+                <input type="date" class="form-control" id="post_deal_expiry" name="post_deal_expiry"></input>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_sale_price" class="form-label">Product Price</label>
+                <input class="form-control" type="number" id="post_sale_price" name="post_sale_price" min="0" value="0" step=".01"></input>
+            </div>
+
+            <div class="mb-3">
+                <label for="post_retailer" class="form-label">Retailer</label>
+                <input class="form-control" id="post_retailer" name="post_retailer"></input>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary">Create Post</button>
+        </form>
+    </div>
+{% endblock %}
